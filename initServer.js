@@ -1,0 +1,1 @@
+const redis = require("./common/db/redis")

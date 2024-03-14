@@ -6,10 +6,10 @@ const ErrorCode  = require("../const/ErrorCode")
 
 
 // redis client connection
-redisClient = new Redis({
+const redisClient = new Redis({
     host: config.redis.host,
     port : config.redis.port,
-    password : config.redis.passwd,
+    password : config.redis.password,
     db: config.redis.db,
 
     retryStrategy: config.redis.retryStrategy,

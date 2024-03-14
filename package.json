@@ -2,9 +2,10 @@
   "name": "neogg",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "oss.js",
   "scripts": {
-    "start": "node ../neogg/bin/www"
+    "oss": "node ./oss.js",
+    "shop": "node ./shop.js"
   },
   "keywords": [],
   "author": "",
@@ -14,7 +15,9 @@
     "consul": "^1.2.0",
     "elasticsearch": "^16.3.0",
     "express": "^4.18.3",
+    "formidable": "^2.1.2",
     "ioredis": "^5.3.2",
-    "mongoose": "6.12.7"
+    "mongoose": "6.12.7",
+    "multer": "^1.4.5-lts.1"
   }
 }

@@ -1,5 +1,5 @@
 const utils = {}
-const config = global._config
+const config = global.commonConfig
 const ErrorCode = require("../const/ErrorCode")
 
 /**
