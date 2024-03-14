@@ -1,0 +1,7 @@
+{
+  "serverName": "file_server",
+  "serverNo": "200",
+  "consul": {
+    "url": "http://192.168.2.4:8500"
+  }
+}
