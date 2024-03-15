@@ -18,21 +18,21 @@ const redisClient = new Redis({
 
 
 redisClient.on("error",function (err) {
-    console.error( utils.Error(err ,ErrorCode.REDIS_ERROR , "Redis Client got some errors !"))
+    console.error( err)
 })
 
 //"wait" | "reconnecting" | "connecting" | "connect" | "ready" | "close" | "end";
 redisClient.on("ready", function (){
-    console.error(utils.Success(null , "Redis Client is ready"))
+    console.error( "Redis Client is ready")
 })
 
 
 redisClient.on("connect" , function (){
-    console.error(utils.Success(null , "Redis Client Connected success"))
+    console.error("Redis Client Connected success")
 })
 
 redisClient.on("reconnecting", function (){
-    console.error(utils.Error(null , ErrorCode.REDIS_ERROR , "Redis Client is reconnecting !"))
+    console.error( "Redis Client is reconnecting !")
 })
 
 module.exports = redisClient

@@ -9,16 +9,16 @@ const conn = mongoose.createConnection(config.mongodb.url, {maxPoolSize : config
 
 
 conn.on("error", function (err){
-    console.error(utils.Error(err , ErrorCode.MONGODB_ERROR , "Got some errors form  mongodb!"), )
+    console.error(err  )
 })
 
 conn.on('disconnected', () =>{
-    console.error(utils.Error(null , ErrorCode.MONGODB_ERROR, "Mongodb server lost connection"))
+    console.error("Mongodb server lost connection")
 });
 
 
 conn.on("connected", function (){
-    console.error(utils.Success(null , "Mongodb is ready !"))
+    console.error( "Mongodb is ready !")
 })
 
 

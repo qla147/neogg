@@ -8,15 +8,16 @@ const uploadFileMiddleWare = require("../../middleware/FileUpload")
  */
 router.post("/file" ,uploadFileMiddleWare,(eq , res) =>{
     console.log(req)
+
     return res.json(utils.Success())
 })
 
 
-router.post("/info" , (req , res)=>{
-    const {fileName , fileMd5 , fileSize , fileFormat} = req.body
-    const userInfo  = req.userInfo
+router.get("/info" , (req , res)=>{
+    // const {fileName , fileMd5 , fileSize , fileFormat} = req.body
+    // const userInfo  = req.userInfo
 
-    return res.json(utils.Success(userInfo  ))
+    return res.json(utils.Success(null  ))
 })
 
 
