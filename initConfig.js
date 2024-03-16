@@ -24,6 +24,7 @@ const inits = {
     },
     afterInit:async ()=>{
         try{
+            //
             let registerRs = await consul.registerServer()
             if (!registerRs.success){
                 return registerRs

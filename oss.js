@@ -45,10 +45,10 @@ init().then(rs=>{
     app.use(logger('dev'));
     app.use(express.json());
     app.use(express.urlencoded({ extended: false }));
-    app.use("/consul/health", require("./routers/Consul"))
-
+    // app.use("/consul/health", require("./routers/Consul"))
+    app.use(require("./middleware/IpCheck"))
 // // 文件上传专用
-    app.use("/v1/api/file/upload",  require("./routers/FileRouter/fileUpload"))
+    app.use("/v1/api/file/upload",  require("./middleware/UserInfo"),require("./routers/FileRouter/fileUpload"))
 // // 文件下载专用
 // //     app.use("/v1/api/file/download", require("./routers/FileRouter/fileDownload"))
     app.set('port', global._config.port);
@@ -58,20 +58,21 @@ init().then(rs=>{
     server.on('error', (err)=>{
         console.error(err)
     });
-
+-
     server.on("clientError",()=>{
         console.error("clientError")
     })
     server.on('listening', ()=>{
-        initConfig.afterInit().then(rs=>{
-            if (!rs.success){
-                console.error(rs.error , rs.msg)
-                process.exit(1)
-            }
-        }).catch(err=>{
-            console.error(err)
-            process.exit(1)
-        })
+        // registered to consul
+        // initConfig.afterInit().then(rs=>{
+        //     if (!rs.success){
+        //         console.error(rs.error , rs.msg)
+        //         process.exit(1)
+        //     }
+        // }).catch(err=>{
+        //     console.error(err)
+        //     process.exit(1)
+        // })
     });
     server.on("close", ()=>{
         console.error("close")

@@ -31,20 +31,19 @@ const FileInfoSchema = new Schema({
       enum: [1, 2, 0],
       default : 0
     },
-    isShared: {
-        default : false ,
-        type : Boolean ,
-        desc :"共享文件"
+    sliceCount:{
+        type: Number,
+        desc :"该文件的子文件切片的数量"
     },
     userId :{
         type : mongoose.Types.ObjectId,
         desc :"上传用户ID",
         ref: "userInfo"
     },
-    autoDelete: {
-        type: Number ,
-        desc : "上传没有完成-自动删除时间"
-    },
+    // autoDelete: {
+    //     type: Number ,
+    //     desc : "上传没有完成-自动删除时间"
+    // },
     completeTime : {
         type : Number ,
         desc :"完成上传的时间"
@@ -79,6 +78,10 @@ const FileSchema = new Schema({
         type : Boolean ,
         default : false ,
         desc :"是否为共享文件"
+    },
+    createTime : {
+        type : Number ,
+        desc :"创建时间"
     }
 },{
     collection: "file"

@@ -1,6 +1,6 @@
 const redisClient = require("../../../common/db/redis")
 const utils = require("../../../common/utils/utils")
-
+const ErrorCode = require("../../../common/const/ErrorCode")
 
 
 /**
@@ -24,7 +24,12 @@ class FileUpLoad {
     async fileUploadIsComplete(sliceKey){
         try{
             // 获取该文件所有的子块信息
-            let fileUploadSignals = await  redisClient.lrange(sliceKey , 0, -1 )
+            let fileUploadSignals = await  redisClient.hgetall(sliceKey)
+            if (!fileUploadSignals , Object.keys(fileUploadSignals).length === 0 ){
+                return utils.Error("File not found !", ErrorCode.FILE_NO_FOUND_ERROR)
+            }
+
+
             for (const  x of  fileUploadSignals) {
                 if (!x) {
                     // 发现没有上传的块 返回 false
@@ -43,10 +48,11 @@ class FileUpLoad {
      * @date : 20240313
      * @param sliceKey 文件md5
      * @param sliceNo 子块编号
+     * @param filePath 子块存放的临时地址
      * @returns {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
      * @description : 用于标记子块已经上传
      */
-    async fileUpload(sliceKey, sliceNo){
+    async fileUpload(sliceKey, sliceNo, filePath ){
         try{
             // 判断文件上传是否初始化
             let exist  = await redisClient.exists(sliceKey)
@@ -55,13 +61,7 @@ class FileUpLoad {
                 return utils.Error("File Upload Info Not Found !")
             }
 
-            exist = await redisClient.lindex(sliceKey , sliceNo )
-            if (!exist){
-                // 该文件已经标记为上传
-                return utils.Success(null)
-            }
-            // 没有标记为上传，就标记上
-            await redisClient.lset(sliceKey , sliceNo, true )
+            await redisClient.hset(sliceKey , sliceNo,filePath )
 
             return utils.Success(null)
 
@@ -83,12 +83,12 @@ class FileUpLoad {
     async fileUploadInit(sliceKey ,sliceLength, expiredTimeSpan){
         try{
             let start = 0
-            let sliceNos = []
+            let sliceNos = {}
             for (; start < sliceLength; start++){
-                sliceNos.push(false)
+                sliceNos[start] = ""
             }
-            // 初始化标记数组
-            await redisClient.lpush(sliceKey , ...sliceNos)
+            //
+            await redisClient.hmset(sliceKey, sliceNos)
             // 设置过期删除
             await redisClient.expire(sliceKey,expiredTimeSpan)
             return utils.Success(null)
@@ -114,5 +114,7 @@ class FileUpLoad {
 
 }
 
+const fileUpload = new FileUpLoad()
 
-module.exports = FileUpLoad
+
+module.exports = fileUpload

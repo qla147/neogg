@@ -1,5 +1,5 @@
 const utils = {}
-const config = global.commonConfig
+const config = global.commonConfig || {serverNo :"200"}
 const ErrorCode = require("../const/ErrorCode")
 
 /**

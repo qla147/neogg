@@ -20,4 +20,15 @@ ipUtils.getLocalIp = ()=>{
     return  utils.Error("server`s ip not found !")
 }
 
+// 获取客户IP
+ipUtils.getClientIp  = (req)=>{
+    return req.headers['x-forwarded-for'] ||
+        req.ip ||
+        req.connection.remoteAddress ||
+        req.socket.remoteAddress ||
+        req.connection.socket.remoteAddress ||
+        '';
+}
+
+
 module.exports = ipUtils

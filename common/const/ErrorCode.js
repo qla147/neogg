@@ -9,8 +9,9 @@ const Code =  {
     "PARAM_ERROR":"507" , // 参数错误
 
 
-    "FILE_EXIST_ERROR":"610" // 文件已经存在
-
+    "FILE_EXIST_ERROR":"610" ,// 文件已经存在
+    "FILE_ORDER_ERROR": "611", // 文件切分块的数量不正确
+    "FILE_NO_COMPLETE_ERROR": "612" // 文件切分块内容为空
 
 
 }

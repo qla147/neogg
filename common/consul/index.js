@@ -83,8 +83,8 @@ class  ConsulClient {
         try{
             const serviceList =await this.client.agent.service.list()
             for (const x in serviceList){
-               // const {} =
-                console.table(serviceList[x])
+                console.error(serviceList[x])
+                const {Tags, Port , Address, Weights } =serviceList[x]
             }
             return utils.Success(null )
         }catch (e) {
