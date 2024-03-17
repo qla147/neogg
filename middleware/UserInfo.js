@@ -12,7 +12,7 @@ middleware.checkUserFromRequest = (req , res , next ) =>{
     // const {token } = req.headers ;
     // const userId  = ""
     req.userInfo =  {
-        id: "123456",
+        _id: "123456",
         username: "oreo"
     }
     next(req, res)

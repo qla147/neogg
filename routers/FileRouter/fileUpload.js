@@ -9,13 +9,14 @@ const ErrorCode = require("../../common/const/ErrorCode")
 /**
  * 用户文件实体上传
  */
-router.post("/file" ,uploadFileMiddleWare,(eq , res) =>{
+router.post("/file" ,uploadFileMiddleWare,async (req , res) =>{
+    // 参数检测和逻辑依赖 ，因此这里不作参数检测
+    let rs = await fileService.fileUploadService(req.userInfo , req.files, req.fields)
+    return  res.json(rs)
 
-    return res.json(utils.Success(req.files))
 })
 
 
-router.delete()
 
 /**
  * 用户上传文件的基本信息

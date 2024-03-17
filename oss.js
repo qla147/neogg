@@ -46,22 +46,32 @@ init().then(rs=>{
     app.use(express.json());
     app.use(express.urlencoded({ extended: false }));
     // app.use("/consul/health", require("./routers/Consul"))
-    app.use(require("./middleware/IpCheck"))
+    // app.use(require("./middleware/IpCheck"))
 // // 文件上传专用
-    app.use("/v1/api/file/upload",  require("./middleware/UserInfo"),require("./routers/FileRouter/fileUpload"))
+    const userCheckMiddleware = require("./middleware/UserInfo").checkUserFromRequest
+    app.use((req, res,next)=>{
+        console.error(req.url)
+        next()
+    })
+    app.use("/v1/api/file/upload",require("./routers/FileRouter/fileUpload"))
 // // 文件下载专用
 // //     app.use("/v1/api/file/download", require("./routers/FileRouter/fileDownload"))
     app.set('port', global._config.port);
     const server = http.createServer(app);
+
+
+    app.on("error",(err)=>{
+        console.error(err)
+    })
 
     server.listen(global._config.port,global._config.host);
     server.on('error', (err)=>{
         console.error(err)
     });
 -
-    server.on("clientError",()=>{
-        console.error("clientError")
-    })
+    // server.on("clientError",()=>{
+    //     console.error("clientError")
+    // })
     server.on('listening', ()=>{
         // registered to consul
         // initConfig.afterInit().then(rs=>{
@@ -74,12 +84,15 @@ init().then(rs=>{
         //     process.exit(1)
         // })
     });
-    server.on("close", ()=>{
-        console.error("close")
+    server.on("error", (err)=>{
+        console.error(err)
     })
-    server.on("checkExpectation",()=>{
-        console.error("checkExpectation")
-    })
+    // server.on("close", ()=>{
+    //     console.error("close")
+    // })
+    // server.on("checkExpectation",()=>{
+    //     console.error("checkExpectation")
+    // })
 
 
 }).catch((err)=>{

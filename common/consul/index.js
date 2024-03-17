@@ -41,6 +41,14 @@ class  ConsulClient {
             if (!config.port){
                 config.port = 8080
             }
+            // 单个切片的长度
+            if(!config.sliceFileSize){
+                config.sliceFileSize = 1024 *1024
+            }
+            // 上传临时文件保存时间
+            if (!config.maxTempFilePersistTime){
+                config.maxTempFilePersistTime = 12 *60 *60 *1000
+            }
 
             global._config = config
             return utils.Success(config)

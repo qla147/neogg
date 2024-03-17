@@ -11,8 +11,10 @@ const Code =  {
 
     "FILE_EXIST_ERROR":"610" ,// 文件已经存在
     "FILE_ORDER_ERROR": "611", // 文件切分块的数量不正确
-    "FILE_NO_COMPLETE_ERROR": "612" // 文件切分块内容为空
-
+    "FILE_NO_COMPLETE_ERROR": "612", // 文件切分块内容为空
+    "FILE_UPLOAD_TASK_NOT_FOUND": "613", //文件上传任务不存在
+    "FILE_UPLOAD_TASK_COMPLETE": "614", //文件上传任务已经完成
+    "FILE_SLICE_ERROR" : "615" //文件上传切片错误
 
 }
 

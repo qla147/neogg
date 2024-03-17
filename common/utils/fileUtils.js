@@ -1,7 +1,9 @@
 const utils = require("./utils")
 const ErrorCode = require("../const/ErrorCode")
 const fs = require("fs")
-const util = require("util");
+const config = global._config
+// 单个切片的大小
+
 
 const fileUtils = {
     //合并文件
@@ -87,7 +89,7 @@ const fileUtils = {
 
     // 根据需要上传文件的大小，计算需要的文件切片数量， 每个文件500K
     computeSliceCount :(filesize)=>{
-        let count  =Math.floor(filesize / (500 * 1024))
+        let count  =Math.floor(filesize / config.sliceFileSize)
         if (filesize % (500 *1024) > 0) {
             count++
         }

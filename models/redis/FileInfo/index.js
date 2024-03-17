@@ -1,7 +1,7 @@
 const redisClient = require("../../../common/db/redis")
 const utils = require("../../../common/utils/utils")
 const ErrorCode = require("../../../common/const/ErrorCode")
-
+const config  = global._config
 
 /**
  * @author: hhh
@@ -19,24 +19,13 @@ class FileUpLoad {
      * @date: 20240313
      * @param sliceKey 文件md5
      * @returns {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
-     * @description: 用于检测文件是否上传完成
+     * @description: 获取文件所有的子切片的信息
      */
-    async fileUploadIsComplete(sliceKey){
+    async fileUploadAllInfo(sliceKey){
         try{
             // 获取该文件所有的子块信息
             let fileUploadSignals = await  redisClient.hgetall(sliceKey)
-            if (!fileUploadSignals , Object.keys(fileUploadSignals).length === 0 ){
-                return utils.Error("File not found !", ErrorCode.FILE_NO_FOUND_ERROR)
-            }
-
-
-            for (const  x of  fileUploadSignals) {
-                if (!x) {
-                    // 发现没有上传的块 返回 false
-                    return utils.Success(false)
-                }
-            }
-            return utils.Success(true)
+            return utils.Success(fileUploadSignals)
         }catch (e) {
             console.error(e)
             return utils.Error(e)
@@ -63,6 +52,8 @@ class FileUpLoad {
 
             await redisClient.hset(sliceKey , sliceNo,filePath )
 
+            await redisClient.expire(sliceKey,config.maxTempFilePersistTime )
+
             return utils.Success(null)
 
         }catch (e) {
@@ -80,7 +71,7 @@ class FileUpLoad {
      * @param expiredTimeSpan 过期时长 单位秒
      * @description 用于初始化redis存储的标记用户已经上传文件的标识数组
      */
-    async fileUploadInit(sliceKey ,sliceLength, expiredTimeSpan){
+    async fileUploadInit(sliceKey ,sliceLength){
         try{
             let start = 0
             let sliceNos = {}
@@ -90,7 +81,7 @@ class FileUpLoad {
             //
             await redisClient.hmset(sliceKey, sliceNos)
             // 设置过期删除
-            await redisClient.expire(sliceKey,expiredTimeSpan)
+            await redisClient.expire(sliceKey,config.maxTempFilePersistTime)
             return utils.Success(null)
         }catch (e) {
             console.error(e)

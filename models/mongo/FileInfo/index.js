@@ -2,6 +2,10 @@
 const  mongoose = require("../../../common/db/mongo")
 const Schema = mongoose.Schema
 const FileInfoSchema = new Schema({
+    fileName :{
+        type: String ,
+        desc :"文件名称"
+    },
     fileSize :{
         required : true ,
         type : Number ,
@@ -40,13 +44,9 @@ const FileInfoSchema = new Schema({
         desc :"上传用户ID",
         ref: "userInfo"
     },
-    // autoDelete: {
-    //     type: Number ,
-    //     desc : "上传没有完成-自动删除时间"
-    // },
-    completeTime : {
+    updateTime : {
         type : Number ,
-        desc :"完成上传的时间"
+        desc :"更新时间"
     },
     createTime : {
         type : Number ,
@@ -57,7 +57,6 @@ const FileInfoSchema = new Schema({
         ref :"file",
         desc :"文件物理存储表"
     }
-
 },{
     collection :"fileInfo"
 })
