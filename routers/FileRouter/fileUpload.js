@@ -2,7 +2,7 @@ const express = require("express")
 const utils = require("../../common/utils/utils")
 const router = express.Router()
 const uploadFileMiddleWare = require("../../middleware/FileUpload")
-const fileService = require("../../services/FileService/index")
+const fileService = require("../../services/FileService/upload")
 const ErrorCode = require("../../common/const/ErrorCode")
 
 
@@ -22,7 +22,7 @@ router.post("/file" ,uploadFileMiddleWare,async (req , res) =>{
  * 用户上传文件的基本信息
  */
 router.post("/info" , async (req , res)=>{
-    let {fileSize , fileMd5 , fileType } = req.body
+    let {fileSize , fileMd5 , fileType , fileName } = req.body
     // ----------------------------------------------------参数检测------------------------------------------------------
     if (!fileSize || isNaN(fileSize)){
         return res.json(utils.Error(null , ErrorCode.PARAM_ERROR , "fileSize"))
@@ -42,6 +42,10 @@ router.post("/info" , async (req , res)=>{
 
     if(!fileType){
         return res.json(utils.Error(null ,ErrorCode.PARAM_ERROR,"fileType" ))
+    }
+
+    if (!fileName || fileName.length  === 0 ){
+        return res.json(utils.Error(null ,ErrorCode.PARAM_ERROR,"fileName" ))
     }
 
     const fileInfo = {fileSize , fileType , fileMd5}

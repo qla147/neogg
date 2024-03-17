@@ -1,5 +1,4 @@
 const Consul = require("consul")
-const uuid = require("uuid")
 const utils = require("../utils/utils")
 const ipUtils = require("../utils/ipUtils")
 let  config ;

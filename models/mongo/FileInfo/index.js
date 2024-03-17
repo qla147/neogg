@@ -19,7 +19,7 @@ const FileInfoSchema = new Schema({
     fileType :{
       type : String,
       // enum :["video","audio","doc" , "pdf", "xls","xlsx","img"],
-      desc :"文件类型"
+      desc :"文件类型 content-type"
     },
     fileUrl : {
       type : String ,
@@ -89,5 +89,5 @@ const FileSchema = new Schema({
 
 module.exports ={
     FileModel :mongoose.model("file", FileSchema),
-    FileInfoModel : module.exports = mongoose.model("fileInfo", FileInfoSchema)
+    FileInfoModel :  mongoose.model("fileInfo", FileInfoSchema)
 }

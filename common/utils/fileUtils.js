@@ -1,13 +1,80 @@
 const utils = require("./utils")
 const ErrorCode = require("../const/ErrorCode")
 const fs = require("fs")
+const {file} = require("elasticsearch/src/lib/loggers");
+const path = require("path")
 const config = global._config
 // 单个切片的大小
 
 
 const fileUtils = {
+    /**
+     * 获取所有的文件目录下所有文件， 不支持多级目录
+     * @param  filePath 文件夹目录地址
+     */
+    getAllFilesFormDir :(filePath)=>{
+        return new Promise(resolve=>{
+            let result = []
+            //
+            fs.stat(filePath , (err, stats)=>{
+                if (err){
+                    console.error(err)
+                    return resolve(utils.Error(err))
+                }
+                if (stats.isDirectory()){
+                    fs.readdir(filePath, (err, files)=>{
+
+                        if (err){
+                            console.error(err)
+                            return resolve(utils.Error(err))
+                        }
+                        for (const x in files){
+                            result.push(path.join(filePath, files[x]))
+                        }
+                        return resolve(utils.Success(result))
+                    })
+                }else {
+                    return resolve(utils.Success(result))
+                }
+            })
+        })
+
+    },
+
+
+    // 使用流下载文件
+    downloadFile :(filePath , res) =>{
+        return new Promise(resolve=>{
+            let readStream = fs.createReadStream(filePath)
+            readStream.pipe(res)
+
+            readStream.on("error", (err)=>{
+                if (err){
+                    console.error(err)
+                    res.status(500)
+                    res.end()
+                    return utils.Error(err)
+                }
+            })
+
+            readStream.on("end",()=>{
+                res.status(200)
+                res.end()
+                return utils.Success(null)
+            })
+
+        })
+    },
+
+
     //合并文件
-    mergeFiles(filePathMap, destFilePath) {
+    /**
+     * @desc  使用流的方式将多个文件合并到一个文件
+     * @param filePathMap
+     * @param destFilePath
+     * @returns {Promise<unknown>}
+     */
+    mergeFiles: (filePathMap, destFilePath) =>{
         return new Promise(resolve =>{
 
             // 拿到所有的文件序号， 从0 开始
@@ -64,11 +131,6 @@ const fileUtils = {
 
                 }
 
-
-
-
-
-
             }
             // 开启目标文件写入流
             const writeStream = fs.createWriteStream(destFilePath, "binary")
@@ -81,8 +143,6 @@ const fileUtils = {
                 return resolve(utils.Success())
             })
 
-
-
         })
 
     },
@@ -94,7 +154,25 @@ const fileUtils = {
             count++
         }
         return count++
+    },
+    // 删除文件
+    deleteFile: (filePath )=>{
+        return new Promise(resolve =>{
+            fs.access(filePath, fs.constants.F_OK, (err) => {
+                if(err){
+                    return resolve(utils.Success(null ))
+                }
+                fs.unlink(filePath, (err)=>{
+                    return resolve(utils.Success(null))
+                })
+
+            })
+        })
     }
+
+
+
+
 
 
 

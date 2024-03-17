@@ -1,12 +1,14 @@
 global.commonConfig = require("./config/oss.json")
 const initConfig = require("./initConfig")
 const utils = require("./common/utils/utils");
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
-var debug = require('debug')('neogg:server');
-var http = require('http');
+const express = require('express');
+// const  path = require('path');
+const  logger = require('morgan');
+// var debug = require('debug')('neogg:server');
+const {timer} = require("./services/TimerService/index")
+
+
+const  http = require('http');
 const fs = require("fs")
 
 // var server
@@ -33,12 +35,19 @@ async function init(){
 
 
 
+
+
+
 init().then(rs=>{
    if (!rs.success){
        console.error(rs.error)
        console.error("The server was stopped !")
        process.exit(1)
    }
+    // 设置定时器
+    timer.setTask(require("./services/TimerService/FileExpiredTask").generatorTask())
+
+    timer.start()
 
     const app = express()
 
@@ -47,15 +56,16 @@ init().then(rs=>{
     app.use(express.urlencoded({ extended: false }));
     // app.use("/consul/health", require("./routers/Consul"))
     // app.use(require("./middleware/IpCheck"))
-// // 文件上传专用
+    // 用户权限 信息中间件
     const userCheckMiddleware = require("./middleware/UserInfo").checkUserFromRequest
     app.use((req, res,next)=>{
         console.error(req.url)
         next()
     })
+    // 文件上传专用
     app.use("/v1/api/file/upload",require("./routers/FileRouter/fileUpload"))
-// // 文件下载专用
-// //     app.use("/v1/api/file/download", require("./routers/FileRouter/fileDownload"))
+        // // 文件下载专用
+    app.use("/v1/api/file/download", require("./routers/FileRouter/fileDownload"))
     app.set('port', global._config.port);
     const server = http.createServer(app);
 

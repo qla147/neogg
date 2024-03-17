@@ -4,7 +4,7 @@ const {FileInfoModel, FileModel}  = require("../../models/mongo/FileInfo")
 const fileRedisModel  = require("../../models/redis/FileInfo")
 const fileUtils = require("../../common/utils/fileUtils")
 const cryptoUtils = require("../../common/utils/cryptoUtils")
-const {now} = require("mongoose");
+const path = require("path")
 const config = global._config
 const service = {}
 
@@ -40,19 +40,51 @@ service.fileCheckUploadComplete = async (userInfo , param ) => {
 
         let filePathMap = filePathMapRs.data
 
-        let isComplete = false
+
         let sliceCounts =  []
-
-
-        for (const x in  filePathMap){
-            if (filePathMap[x]/   )
-
+        // 拿到没有上传的子切片
+        for (let index = 0 ; index <  fileInfo.sliceCount; index++){
+            if (!filePathMap[index]){
+                sliceCounts.push(index)
+            }
         }
 
+        if(sliceCounts.length === 0 ){
+            // 文件上传完成 开始合并文件
 
+            let destDownloadFilePath= path.join(config.downloadPath, fileMd5)
+            // 合并
+            let mergeRs = await fileUtils.mergeFiles(filePathMap,destDownloadFilePath )
+            if (!mergeRs.success){
+                return mergeRs
+            }
 
+            // 入库
+            const fileObject = new FileModel({
+                fileMd5 ,
+                filePath: destDownloadFilePath,
+                isShare: false ,
+                createTime : Date.now()
+            })
 
+            await fileObject.save()
+            // 更新文件信息表
+            await FileInfoModel.findOneAndUpdate({_id: fileInfo._id},{fileStatus : 1, updateTime : Date.now(), fileId: fileObject._id} , {upsert: false  })
+            // 删除redis记录
+            await fileRedisModel.fileDeleteUploadInfo(fileMd5)
 
+            let deleteFileTasks = []
+            // 删除文件切片子文件
+            for(const x of filePathMap){
+                deleteFileTasks.push(fileUtils.deleteFile(filePathMap[x]))
+            }
+
+            if (deleteFileTasks.length > 0 ){
+               await  Promise.allSettled(deleteFileTasks)
+            }
+
+        }
+        return utils.Success(sliceCounts)
     }catch (e) {
         console.error(e)
         return utils.Error(e)
@@ -62,10 +94,15 @@ service.fileCheckUploadComplete = async (userInfo , param ) => {
 
 }
 
-
+/**
+ * @desc 文件切片上传服务
+ * @param userInfo 用户信息
+ * @param upFileInfo 上传文件切片物理信息
+ * @param params 上传文件的配置信息
+ * @returns {Promise<*>}
+ */
 service.fileUploadService = async (userInfo , upFileInfo , params ) =>{
     try{
-
         // -----------------------------------------------------参数检测-------------------------------------------------
         let {fileMd5 , sliceOrderNo} = params
         upFileInfo = Object.values(upFileInfo)
@@ -95,7 +132,7 @@ service.fileUploadService = async (userInfo , upFileInfo , params ) =>{
 
 
         ///====================================================检测文件上传任务是否OK=====================================**
-        const fileInfo = await FileInfoModel.findOne({userId: userInfo._id, fileMd5},{fileStatus:1, sliceCount :1, fileSize :1, fileMd5:1})
+        let fileInfo = await FileInfoModel.findOne({userId: userInfo._id, fileMd5},{fileStatus:1, sliceCount :1, fileSize :1, fileMd5:1})
         if (!fileInfo ||  fileInfo.fileStatus === 1 ){
             return utils.Error("", ErrorCode.FILE_UPLOAD_TASK_NOT_FOUND)
         }
@@ -120,9 +157,16 @@ service.fileUploadService = async (userInfo , upFileInfo , params ) =>{
             return redisRs
         }
 
-        await FileInfoModel.findOneAndUpdate({_id: fileInfo._id} , {updateTime : Date.now()},{upsert: false })
 
-        return utils.Success(null)
+        let mergeRs = await service.fileCheckUploadComplete(userInfo,fileInfo)
+
+        if(!mergeRs.success){
+            return mergeRs
+        }
+
+        fileInfo = await FileInfoModel.findOneAndUpdate({_id: fileInfo._id} , {updateTime : Date.now()},{upsert: false })
+
+        return utils.Success(fileInfo)
     }catch (e) {
         console.error(e)
         return utils.Error(e)
@@ -140,16 +184,9 @@ service.fileUploadService = async (userInfo , upFileInfo , params ) =>{
 service.fileInfoService  = async (userInfo , fileInfo) =>{
     try {
         const userId = userInfo.id
-        const { fileSize , fileMd5 ,   fileType} = fileInfo ;
+        const { fileSize , fileMd5 ,   fileType , fileName } = fileInfo ;
 
-        // 检测参数
-        if (!fileSize || parseInt( fileSize) <= 1 ){
-            return utils.Error(null , ErrorCode.PARAM_ERROR )
-        }
 
-        if (fileMd5.length === 0 ){
-            return utils.Error(null , ErrorCode.PARAM_ERROR)
-        }
 
         // 判断文件上传任务是否已经在
         let existFileTask  = await FileInfoModel.findOne({fileMd5,userId })
@@ -160,6 +197,7 @@ service.fileInfoService  = async (userInfo , fileInfo) =>{
         // 判断是否存在相同的文件
         let existFile = await FileModel.findOneAndUpdate({fileMd5},{isShare: true },{upsert: false })
         let fileInfo = {
+                fileName,
                 fileMd5 ,
                 fileSize,
                 fileType,
