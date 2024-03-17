@@ -58,6 +58,15 @@ service.fileCheckUploadComplete = async (userInfo , param ) => {
             if (!mergeRs.success){
                 return mergeRs
             }
+            // 比对新旧md5
+            const newMd5Rs = cryptoUtils.getFileMd5ByStream(destDownloadFilePath)
+
+            if (!newMd5Rs.success || newMd5Rs.data !== fileMd5){
+                await fileUtils.deleteFile(destDownloadFilePath)
+                return newMd5Rs
+            }
+
+
 
             // 入库
             const fileObject = new FileModel({
@@ -151,7 +160,7 @@ service.fileUploadService = async (userInfo , upFileInfo , params ) =>{
             }
 
         }
-
+        // redis 记录下来
         let redisRs = await fileRedisModel.fileUpload(fileMd5, sliceOrderNo, filePath)
         if (!redisRs.success){
             return redisRs

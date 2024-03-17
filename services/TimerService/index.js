@@ -1,4 +1,6 @@
-const  cron = require('cron');
+const cron = require('node-cron')
+
+
 
 
 class TimerTask {
@@ -7,6 +9,7 @@ class TimerTask {
         this.onComplete = onComplete
         this.handler = handler
         this.taskName = taskName
+
     }
 
     getTaskName(){
@@ -30,7 +33,7 @@ class TimerTask {
 class Timer {
     constructor() {
         this.tasks = []
-        // this.start = this.start.bind(this)
+        this.start = this.start.bind(this)
     }
     setTask(taskInfo ){
         this.tasks.push(taskInfo)
@@ -38,13 +41,14 @@ class Timer {
     // 启动定时器任务
     start(){
         for(const x in this.tasks){
-
-            cron.CronJob.from({
-                cronTime: this.tasks[x].cronString,
-                onTick : this.tasks[x].handler,
+            console.log("start -----", this.tasks[x].taskName)
+            let job = cron.schedule( this.tasks[x].cronString, this.tasks[x].handler)
                 // onComplete: this.tasks[x].onComplete,
-                start: true
-            })
+                // start: true
+            // })
+
+            job.start()
+            // console.log(job.cronTime)
         }
     }
 }

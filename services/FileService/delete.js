@@ -67,21 +67,22 @@ const deleteExpiredTempUploadFile = async ()=>{
 }
 
 
-service.deleteExpiredData = async ()=>{
-    try{
+service.deleteExpiredData =  ()=>{
+        console.error("定时器执行·······")
         // 删除过期的数据库文件上传数据
-        let rs = await deleteExpiredDatabaseData()
-        if (!rs.success){
-            console.error(rs)
-        }
+         deleteExpiredDatabaseData().then(rs=>{
+             if (!rs.success){
+                 console.error(rs)
+             }
+         })
+
         // 删除过期的文件
-        rs = await deleteExpiredTempUploadFile()
-        if(!rs.success){
-            console.error(rs)
-        }
-    }catch (err) {
-        console.error(err)
-    }
+       deleteExpiredTempUploadFile().then(rs=>{
+           if(!rs.success){
+               console.error(rs)
+           }
+       })
+
 }
 
 module.exports = service;
