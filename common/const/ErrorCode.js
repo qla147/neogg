@@ -1,4 +1,7 @@
 const Code =  {
+    "GOODS_DETAIL_NOT_FOUND" :"100", // 商品详情没有找到
+
+
     "INTERNAL_ERROR": "500", // 内部错误
     "MONGODB_ERROR": "501" ,    //mongodb 错误
     "REDIS_ERROR":" 502",   // redis 错误
@@ -14,7 +17,10 @@ const Code =  {
     "FILE_NO_COMPLETE_ERROR": "612", // 文件切分块内容为空
     "FILE_UPLOAD_TASK_NOT_FOUND": "613", //文件上传任务不存在
     "FILE_UPLOAD_TASK_COMPLETE": "614", //文件上传任务已经完成
-    "FILE_SLICE_ERROR" : "615" //文件上传切片错误
+    "FILE_SLICE_ERROR" : "615", //文件上传切片错误
+
+
+
 
 }
 

@@ -2,9 +2,9 @@
   "name": "neogg",
   "version": "1.0.0",
   "description": "",
-  "main": "oss.js",
+  "main": "file_server.js",
   "scripts": {
-    "oss": "node ./oss.js",
+    "oss": "node file_server.js",
     "shop": "node ./shop.js"
   },
   "keywords": [],

@@ -1,5 +1,6 @@
 const client = require("../../../common/db/es")
 const utils = require("../../../common/utils/utils");
+const {model} = require("mongoose");
 
 
 class GoodsInfoEs {
@@ -127,14 +128,13 @@ class GoodsInfoEs {
         }
     }
 
-
-
-
-
 }
 
-
-
-const args = process.argv.slice(2);
-
-main(args.join(' '))
+var goodsInfoEs ;
+module.exports = ()=>{
+    if (goodsInfoEs){
+        return goodsInfoEs
+    }
+    goodsInfoEs = new GoodsInfoEs()
+    return goodsInfoEs
+}

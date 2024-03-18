@@ -1,23 +1,25 @@
-global.commonConfig = require("./config/oss.json")
+global.commonConfig = require("./config/shop.json")
 const initConfig = require("./initConfig")
 const utils = require("./common/utils/utils");
 const express = require('express');
 // const  path = require('path');
-const  logger = require('morgan');
+// const  logger = require('morgan');
 // var debug = require('debug')('neogg:server');
-const {timer} = require("./services/TimerService/index")
+// const {timer} = require("./services/TimerService/index")
 
 
-const  http = require('http');
+// const  http = require('http');
 const fs = require("fs")
+// const mongoose = require("mongoose");
 
 // var server
 
 async function init(){
     try{
-       await  initConfig.init()
-       require("./common/db/redis");
-       require("./common/db/mongo");
+        await  initConfig.init()
+        require("./common/db/redis");
+        require("./common/db/mongo");
+        require("./common/db/es")
         const config = global._config
         fs.access(config.filePath, fs.constants.F_OK, (err) => {
             if (err) {
@@ -39,15 +41,15 @@ async function init(){
 
 
 init().then(rs=>{
-   if (!rs.success){
-       console.error(rs.error)
-       console.error("The server was stopped !")
-       process.exit(1)
-   }
+    if (!rs.success){
+        console.error(rs.error)
+        console.error("The server was stopped !")
+        process.exit(1)
+    }
     // 设置定时器
-    timer.setTask(require("./services/TimerService/FileExpiredTask").generatorTask())
+    // timer.setTask(require("./services/TimerService/FileExpiredTask").generatorTask())
 
-    timer.start()
+    // timer.start()
 
     const app = express()
 
@@ -63,9 +65,9 @@ init().then(rs=>{
         next()
     })
     // 文件上传专用
-    app.use("/v1/api/file/upload",require("./routers/FileRouter/fileUpload"))
-        // // 文件下载专用
-    app.use("/v1/api/file/download", require("./routers/FileRouter/fileDownload"))
+    app.use("/v1/api/goods",require("./routers/GoodsRouter/goods"))
+    // // 文件下载专用
+    // app.use("/v1/api/file/download", require("./routers/FileRouter/fileDownload"))
     app.set('port', global._config.port);
     const server = http.createServer(app);
 
@@ -78,22 +80,22 @@ init().then(rs=>{
     server.on('error', (err)=>{
         console.error(err)
     });
--
-    // server.on("clientError",()=>{
-    //     console.error("clientError")
-    // })
-    server.on('listening', ()=>{
-        // registered to consul
-        // initConfig.afterInit().then(rs=>{
-        //     if (!rs.success){
-        //         console.error(rs.error , rs.msg)
-        //         process.exit(1)
-        //     }
-        // }).catch(err=>{
-        //     console.error(err)
-        //     process.exit(1)
+    -
+        // server.on("clientError",()=>{
+        //     console.error("clientError")
         // })
-    });
+        server.on('listening', ()=>{
+            // registered to consul
+            // initConfig.afterInit().then(rs=>{
+            //     if (!rs.success){
+            //         console.error(rs.error , rs.msg)
+            //         process.exit(1)
+            //     }
+            // }).catch(err=>{
+            //     console.error(err)
+            //     process.exit(1)
+            // })
+        });
     server.on("error", (err)=>{
         console.error(err)
     })
@@ -111,7 +113,6 @@ init().then(rs=>{
 })
 
 process.on('exit',function(code){
-    // TODO 这里可以主动释放其他资源 如zookeeper连接等
     if (code === 1000) {
         console.error('process:uncaughtException');
     }else if (code === 1001) {

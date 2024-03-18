@@ -11,7 +11,6 @@ const redisClient = new Redis({
     port : config.redis.port,
     password : config.redis.password,
     db: config.redis.db,
-
     retryStrategy: config.redis.retryStrategy,
     maxRetriesPerRequest : config.maxRetriesPerRequest
 })
