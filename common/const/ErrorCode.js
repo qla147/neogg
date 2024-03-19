@@ -23,6 +23,8 @@ const Code =  {
     "FILE_UPLOAD_TASK_NOT_FOUND": "613", //文件上传任务不存在
     "FILE_UPLOAD_TASK_COMPLETE": "614", //文件上传任务已经完成
     "FILE_SLICE_ERROR" : "615", //文件上传切片错误
+    "FILE_GRIDFS_ERROR" :"616"
+
 
 }
 

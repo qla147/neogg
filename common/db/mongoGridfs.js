@@ -1,14 +1,14 @@
-const  fs = require('fs' );
 const  mongoose = require("mongoose");
 const  Grid = require('gridfs-stream')
 const config = global._config
-const utils = require("../utils/utils")
-const ErrorCode = require ("../const/ErrorCode")
 
 
 
 
 const mongooseInstance = new mongoose.Mongoose()
+
+var flag = false
+
 mongooseInstance.connect(config.gridfs.url, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -22,6 +22,7 @@ conn.on("error",(err)=>{
 var   gridfs;
 conn.on("open", ()=>{
     console.error("gridfs is ready!")
+    flag = true
     gridfs= Grid(mongooseInstance.connection.db , mongooseInstance.mongo)
 })
 
@@ -29,6 +30,16 @@ conn.on("open", ()=>{
 
 
 
-module.exports = gridfs
+module.exports =()=>{
+   if(flag){
+       return gridfs
+   }
+   let timer = setInterval(()=>{
+       if (flag){
+           clearInterval(timer)
+           return gridfs
+       }
+   }, 500)
+}
 
 
