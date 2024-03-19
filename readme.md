@@ -527,13 +527,172 @@ OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
 
 
 
-## api 部分
+## API 部分
+
+### 错误码部分
+
+~~~js
+{
+    "GOODS_DETAIL_NOT_FOUND" :"100", // 商品详情没有找到
+    "GOODS_INFO_NOT_FOUND" :"101", // 商品信息没有找到
+    "GOODS_INFO_EXIST": "102",      // 商品已经存在
 
 
+    "LOCK_GOODS_INFO": "200", // 商品被锁住，请稍后再试
+
+
+    "INTERNAL_ERROR": "500", // 内部错误
+    "MONGODB_ERROR": "501" ,    //mongodb 错误
+    "REDIS_ERROR":" 502",   // redis 错误
+    "OUTER_SERVER_ERROR": "503", // 外部服务错误
+    "ES_ERROR": "504", // elasticsearch 错误
+    "FILE_NO_FOUND_ERROR" : "505", //文件没有找到错误
+    "AUTH_ERROR":"506" , // 用户认证错误
+    "PARAM_ERROR":"507" , // 参数错误
+
+
+    "FILE_EXIST_ERROR":"610" ,// 文件已经存在
+    "FILE_ORDER_ERROR": "611", // 文件切分块的数量不正确
+    "FILE_NO_COMPLETE_ERROR": "612", // 文件切分块内容为空
+    "FILE_UPLOAD_TASK_NOT_FOUND": "613", //文件上传任务不存在
+    "FILE_UPLOAD_TASK_COMPLETE": "614", //文件上传任务已经完成
+    "FILE_SLICE_ERROR" : "615", //文件上传切片错误
+}
+
+~~~
+
+
+
+### 商品相关接口
+
+#### 新增商品
+
++ desc 
++ router
++ method 
++ request param sample
++ request param table 
++ response sample 
+
+#### 修改商品
+
++ desc 
++ router
++ method 
++ request param sample 
++ request param table 
++ response sample
+
+#### 商品列表(包含检索)
+
++ desc
++ router
++ method
++ request param sample 
++ request param table 
++ response param  sample
++ response param table
+
+#### 根据商品ID获取商品信息
+
++ desc 
++ router
++ method
++ request param sample
++ request param table 
++ response param sample 
++ response param table 
+
+#### 根据商品ID获取商品详情
+
++ desc
++ router
++ method
++ request param sample
++ request param table 
++ response param sample 
++ response param table 
+
+####
 
 
 
 ## 运维部分
+
+### 依赖组件
+
++ consul
+
++ docker 
+
++ redis 
+
+  version :5 +
+
++ mongodb
+
+  version : 4 +
+
+  mode: replSet 复制集模式
+
++ elasticsearch 
+
+  version: 7.** +
+
++ node.js 
+
+  version: 12+
+
+### consul 配置部分
+
++ file_server
+
+~~~json
+{
+    "redis": {  // redis config 
+      "host":"192.168.2.4",
+      "port":"6379",
+      "password":"123456"
+    },
+    "mongodb":{ // mongodb config 
+        "url":"mongodb://oreo:89287503@192.168.2.4:27017,192.168.2.4:27018,192.168.2.4:27019/oss?readPreference=primaryPreferred&tls=false&replicaSet=rs&authSource=admin",
+        "maxPoolSize": 20
+    },
+  	"gridfs":{ // mongodb GirdFs config 
+     "url":"mongodb://oreo:89287503@192.168.2.4:27017,192.168.2.4:27018,192.168.2.4:27019/gridfs?readPreference=primaryPreferred&tls=false&replicaSet=rs&authSource=admin",
+        "maxPoolSize": 20
+    },
+    "es": { // elasticsearch config 
+      "url":"192.168.2.4:9200",
+      "username": "elastic",
+      "password": "89287503"
+    },
+  	"port": 8080, // server port 
+  	"filePath":"/data/upload",  // the temp dir for uploaded files 
+  	"downloadPath":"/data/download",  // 文件存储目录
+  	"downloadDomain":"http://192.168.2.4:8080/v1/api/file/download", // 文件服务下载链接
+  	"sliceFileSize": 1048576, 	// 文件切片大小
+  	"maxTempFilePersistTime": 43200000 // 文件切片文件最大保存时间（second）
+  }
+~~~
+
++ shop_server
+
+  ~~~json
+  
+  
+  
+  ~~~
+
+  
+
+
+
+## 更新记录
+
+### 20240319 商品部分接口代码开发完成
+
+
 
 
 

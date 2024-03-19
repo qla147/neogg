@@ -1,6 +1,11 @@
 const Code =  {
     "GOODS_DETAIL_NOT_FOUND" :"100", // 商品详情没有找到
     "GOODS_INFO_NOT_FOUND" :"101", // 商品信息没有找到
+    "GOODS_INFO_EXIST": "102",      // 商品已经存在
+
+
+    "LOCK_GOODS_INFO": "200", // 商品被锁住，请稍后再试
+
 
     "INTERNAL_ERROR": "500", // 内部错误
     "MONGODB_ERROR": "501" ,    //mongodb 错误
@@ -18,9 +23,6 @@ const Code =  {
     "FILE_UPLOAD_TASK_NOT_FOUND": "613", //文件上传任务不存在
     "FILE_UPLOAD_TASK_COMPLETE": "614", //文件上传任务已经完成
     "FILE_SLICE_ERROR" : "615", //文件上传切片错误
-
-
-
 
 }
 

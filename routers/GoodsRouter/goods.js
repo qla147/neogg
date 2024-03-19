@@ -6,10 +6,16 @@ const Constant = require("../../common/const/Common")
 const GoodsService = require("../../services/GoodsService")
 
 
+/**
+ * @description 检测商品等参数是否合法
+ * @param goodsInfo  {type : Object, required : true } 商品基本信息
+ * @param goodsDetail  {type : Object, required : true } 商品详情
+ * @returns {{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}}
+ */
 const checkGoodsInfoAndGoodsDetail = (goodsInfo , goodsDetail) =>{
     try{
         // ----------------------------------------------参数检测-goodsInfo---------------------------------------------------
-        if (!goodInfo){
+        if (!goodsInfo){
             return utils.Error(null , ErrorCode.PARAM_ERROR, "goodInfo")
         }
 
@@ -17,7 +23,7 @@ const checkGoodsInfoAndGoodsDetail = (goodsInfo , goodsDetail) =>{
             return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsDetail")
         }
 
-        let  {goodsType, goodsName , goodsPrice, goodCount , goodsImgs } = goodInfo
+        let  {goodsType, goodsName , goodsPrice, goodsCount , goodsImgs } = goodsInfo
 
         if (!Constant.GOODS_TYPE.includes(goodsType)){
             return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsType")
@@ -40,15 +46,15 @@ const checkGoodsInfoAndGoodsDetail = (goodsInfo , goodsDetail) =>{
         }
 
 
-        if (!goodCount || isNaN(goodCount)){
+        if (!goodsCount || isNaN(goodsCount)){
             return utils.Error(null , ErrorCode.PARAM_ERROR , "goodCount")
         }
 
-        if(typeof goodCount == "string"){
-            goodCount = parseInt(goodCount)
+        if(typeof goodsCount == "string"){
+            goodsCount = parseInt(goodsCount)
         }
 
-        if (goodCount <= 0  || goodCount > 9999){
+        if (goodsCount <= 0  || goodsCount > 9999){
             return utils.Error(null , ErrorCode.PARAM_ERROR , "goodCount")
         }
 
@@ -69,6 +75,17 @@ const checkGoodsInfoAndGoodsDetail = (goodsInfo , goodsDetail) =>{
             return utils.Error(null , ErrorCode.PARAM_ERROR , "contentHtml")
         }
 
+        goodsInfo["goodsType"] = goodsType
+        goodsInfo["goodsName"] = goodsName
+        goodsInfo["goodsPrice"] = goodsPrice
+        goodsInfo["goodsCount"] = goodsCount
+        goodsInfo["goodsImgs"] = goodsImgs
+
+        goodsDetail["extraData"] = extraData
+        goodsDetail["contentHtml"] = contentHtml
+
+
+        return utils.Success(null )
     }catch (e) {
         console.error(e)
         return utils.Error(e)
@@ -76,23 +93,29 @@ const checkGoodsInfoAndGoodsDetail = (goodsInfo , goodsDetail) =>{
 }
 
 /**
- * @desc 修改商品价格
- *
+ * @desc 修改商品详情
  */
-router.put("/:goodsId/price" , async(req, res) =>{
+router.put("/:goodsId" , async(req, res) =>{
     const {goodsId} = req.params
-    const {goodsPrice} = req.body
+    const {goodsInfo , goodsDetail } = req.body
+    // 检测参数
+    let rs = checkGoodsInfoAndGoodsDetail(goodsInfo , goodsDetail)
+    if (!rs.success){
+        return res.json(rs)
+    }
 
+    if(goodsId.length !== 24 ){
+        return res.json(utils.Error(null, ErrorCode.PARAM_ERROR, "goodsId"))
+    }
 
-
+    // 调用服务层
+    rs = await GoodsService.updateGoods(goodsId, {
+        goodsInfo , goodsDetail
+    })
+    return res.json(rs)
 })
 
-router.put("/:goodsId/count" , async(req, res) =>{
-    const {goodsId} = req.params
-    const {goodsPrice} = req.body
 
-
-})
 
 
 
@@ -102,15 +125,18 @@ router.put("/:goodsId/count" , async(req, res) =>{
  * @param goodsDetail 商品详情
  */
 router.post("/" , async (req , res)=>{
+    let {goodsDetail , goodsInfo} = req.body
+    // 检测参数
+    let rs = checkGoodsInfoAndGoodsDetail(goodsInfo , goodsDetail)
+    if (!rs.success){
+        return res.json(rs)
+    }
 
     //---------------------------------------------------------调用服务层-------------------------------------------------
-    let  rs = await GoodsService.addGoods({
-        goodsInfo :{goodsType, goodsName , goodsPrice, goodCount , goodsImgs},
-        goodsDetail: {extraData , contentHtml}
+     rs = await GoodsService.addGoods({
+        goodsInfo , goodsDetail
     })
     return res.json(rs)
-
-
 })
 
 /**

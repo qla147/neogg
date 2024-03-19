@@ -3,7 +3,7 @@ const initConfig = require("./initConfig")
 const utils = require("./common/utils/utils");
 const express = require('express');
 // const  path = require('path');
-// const  logger = require('morgan');
+const  logger = require('morgan');
 // var debug = require('debug')('neogg:server');
 // const {timer} = require("./services/TimerService/index")
 

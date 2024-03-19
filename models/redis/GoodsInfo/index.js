@@ -10,9 +10,9 @@ const GoodsLockRedisModel = {
             let rs = await redisClient.setnx(key, 1)
             if (rs === 1){
                 await redisClient.expire(key , 30 )
-
+                return utils.Success(rs)
             }
-            return utils.Success(rs)
+
         }catch (e) {
             console.error(e);
             return utils.Error(e , ErrorCode.REDIS_ERROR)
@@ -36,9 +36,9 @@ const GoodsLockRedisModel = {
 
 const GoodsNumRedisModel = {
     // 入库一个商品
-    insertOne :async (goodsId, no )=>{
+    insertOne :async (goodsId )=>{
         try{
-            let rs = await redisClient.lpush("goodsNum:"+goodsId,no )
+            let rs = await redisClient.lpush("goodsNum:"+goodsId,1 )
             return utils.Success(rs)
         }catch (e) {
             console.error(e)
@@ -52,7 +52,7 @@ const GoodsNumRedisModel = {
           return utils.Success(rs)
       }  catch (e) {
           console.error(e)
-          return utils.Error(e)
+          return utils.Error(e, ErrorCode.REDIS_ERROR)
       }
     },
     // 出库一个商品
@@ -65,8 +65,23 @@ const GoodsNumRedisModel = {
             return utils.Error(e, ErrorCode.REDIS_ERROR )
         }
     },
+
+    subMore: async(goodsId , num ) =>{
+        try{
+            if (num === 0 ){
+                return utils.Success()
+            }
+            let key = "goodsNum:"+goodsId ;
+            await redisClient.lrem(key , num , 1 )
+            return utils.Success(null )
+        }catch (e) {
+            console.error(e)
+            return utils.Error(e, ErrorCode.REDIS_ERROR)
+        }
+    },
+
     // 二次添加商品的数量
-    addMore:async (goodsId , startNum, num )=>{
+    addMore:async (goodsId , num )=>{
         try{
             if (num === 0 ){
                 return utils.Success()
@@ -78,8 +93,7 @@ const GoodsNumRedisModel = {
             let key = "goodsNum:"+goodsId ;
             let indexes = [] ;
             while(index > 0 ){
-                indexes.push(startNum++)
-
+                indexes.push(1)
                 if(indexes.length > 5){
                     await redisClient.lpush(key, ...indexes)
                     indexes = []
@@ -134,4 +148,4 @@ const GoodsNumRedisModel = {
     }
 }
 
-module.exports = {GoodsNumRedisModel}
+module.exports = {GoodsNumRedisModel, GoodsLockRedisModel}
