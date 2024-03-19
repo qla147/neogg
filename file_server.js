@@ -19,6 +19,7 @@ async function init(){
         await  initConfig.init()
         require("./common/db/redis");
         require("./common/db/mongo");
+        require("./common/db/mongoGridfs")
         const config = global._config
         fs.access(config.filePath, fs.constants.F_OK, (err) => {
             if (err) {
