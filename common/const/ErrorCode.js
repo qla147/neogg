@@ -1,6 +1,6 @@
 const Code =  {
     "GOODS_DETAIL_NOT_FOUND" :"100", // 商品详情没有找到
-
+    "GOODS_INFO_NOT_FOUND" :"101", // 商品信息没有找到
 
     "INTERNAL_ERROR": "500", // 内部错误
     "MONGODB_ERROR": "501" ,    //mongodb 错误

@@ -18,13 +18,15 @@ service.addGoods = async (params)=>{
         //开启session
         session = await mongoose.startSession()
         goodsInfo.createTime = Date.now()
-        let goodsInfoModel  = new GoodsInfo(goodsInfo)
 
+        // 入库商品信息
+        let goodsInfoModel  = new GoodsInfo(goodsInfo)
         await goodsInfoModel.save({session})
 
         goodsDetail.goodsId = goodsInfo._id
         goodsDetail.createTime = Date.now()
 
+        //入库商品详情
         let goodsDetailModel = new GoodsDetail(goodsDetail)
         await goodsDetailModel.save({session})
         // 入库redis
@@ -36,8 +38,8 @@ service.addGoods = async (params)=>{
         }
 
         // 入库es
-        const {goodsType,goodsName, _id } = goodsInfo
-        let goodsInfoEs = { goodsType, goodsName, _id:_id.toString()}
+        const {goodsType,goodsName, _id , goodsPrice} = goodsInfo
+        let goodsInfoEs = { goodsType, goodsName, _id:_id.toString(),goodsPrice}
 
         rs = await GoodInfoEsModel.insert(goodsInfoEs)
         if(!rs.success){
@@ -78,6 +80,32 @@ service.search  = (searchParam)=>{
     }
 
 }
+
+/**
+ * @desc  根据商品ID获取商品详情
+ * @param goodsId 商品ID
+ * @returns {Promise<{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
+ */
+service.getGoodsInfoByGoodsId = async(goodsId ) =>{
+    try{
+        let search = {_id: goodsId}
+
+        let rs = await GoodsInfo.findOne(search)
+
+        if (rs){
+            return utils.Success(rs)
+        }
+
+        return utils.Error("", ErrorCode.GOODS_DETAIL_NOT_FOUND,"goods info not found !")
+
+    }catch (err) {
+        console.error(err)
+        return utils.Error(err)
+    }
+
+
+}
+
 
 /**
  * @desc  根据商品ID获取商品详情

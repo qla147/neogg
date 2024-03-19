@@ -6,73 +6,102 @@ const Constant = require("../../common/const/Common")
 const GoodsService = require("../../services/GoodsService")
 
 
+const checkGoodsInfoAndGoodsDetail = (goodsInfo , goodsDetail) =>{
+    try{
+        // ----------------------------------------------参数检测-goodsInfo---------------------------------------------------
+        if (!goodInfo){
+            return utils.Error(null , ErrorCode.PARAM_ERROR, "goodInfo")
+        }
+
+        if(goodsDetail){
+            return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsDetail")
+        }
+
+        let  {goodsType, goodsName , goodsPrice, goodCount , goodsImgs } = goodInfo
+
+        if (!Constant.GOODS_TYPE.includes(goodsType)){
+            return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsType")
+        }
+
+        if(!goodsName || goodsName.length === 0  || goodsName.length > 200){
+            return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsName")
+        }
+
+        if(!goodsPrice ||isNaN(goodsPrice)){
+            return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsPrice")
+        }
+
+        if (typeof goodsPrice == "string"){
+            goodsPrice = parseInt(goodsPrice)
+        }
+
+        if (goodsPrice <= 0 ){
+            return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsPrice")
+        }
+
+
+        if (!goodCount || isNaN(goodCount)){
+            return utils.Error(null , ErrorCode.PARAM_ERROR , "goodCount")
+        }
+
+        if(typeof goodCount == "string"){
+            goodCount = parseInt(goodCount)
+        }
+
+        if (goodCount <= 0  || goodCount > 9999){
+            return utils.Error(null , ErrorCode.PARAM_ERROR , "goodCount")
+        }
+
+        if(!Array.isArray(goodsImgs) || goodsImgs.length === 0 ){
+            return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsImgs")
+        }
+
+        for(const x in goodsImgs){
+            if (goodsImgs[x].length === 0 ){
+                return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsImgs")
+            }
+        }
+
+        //-----------------------------------------------------参数检测-goodsDetail-------------------------------------------
+        let  { extraData , contentHtml } = goodsDetail
+
+        if (contentHtml.length === 0 ){
+            return utils.Error(null , ErrorCode.PARAM_ERROR , "contentHtml")
+        }
+
+    }catch (e) {
+        console.error(e)
+        return utils.Error(e)
+    }
+}
+
+/**
+ * @desc 修改商品价格
+ *
+ */
+router.put("/:goodsId/price" , async(req, res) =>{
+    const {goodsId} = req.params
+    const {goodsPrice} = req.body
+
+
+
+})
+
+router.put("/:goodsId/count" , async(req, res) =>{
+    const {goodsId} = req.params
+    const {goodsPrice} = req.body
+
+
+})
+
+
+
 /**
  * @description : 新增商品到数据库
  * @param goodsInfo 商品基本信息
  * @param goodsDetail 商品详情
  */
 router.post("/" , async (req , res)=>{
-    const { goodInfo , goodsDetail } = req.body
-    // ----------------------------------------------参数检测-goodsInfo---------------------------------------------------
-    if (!goodInfo){
-         return utils.Error(null , ErrorCode.PARAM_ERROR, "goodInfo")
-    }
-
-    if(goodsDetail){
-        return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsDetail")
-    }
-
-    let  {goodsType, goodsName , goodsPrice, goodCount , goodsImgs } = goodInfo
-
-    if (!Constant.GOODS_TYPE.includes(goodsType)){
-        return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsType")
-    }
-
-    if(!goodsName || goodsName.length === 0  || goodsName.length > 200){
-        return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsName")
-    }
-
-    if(!goodsPrice ||isNaN(goodsPrice)){
-        return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsPrice")
-    }
-
-    if (typeof goodsPrice == "string"){
-        goodsPrice = parseInt(goodsPrice)
-    }
-
-    if (goodsPrice <= 0 ){
-        return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsPrice")
-    }
-
-
-    if (!goodCount || isNaN(goodCount)){
-        return utils.Error(null , ErrorCode.PARAM_ERROR , "goodCount")
-    }
-
-    if(typeof goodCount == "string"){
-        goodCount = parseInt(goodCount)
-    }
-
-    if (goodCount <= 0  || goodCount > 9999){
-        return utils.Error(null , ErrorCode.PARAM_ERROR , "goodCount")
-    }
-
-    if(!Array.isArray(goodsImgs) || goodsImgs.length === 0 ){
-        return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsImgs")
-    }
-
-    for(const x in goodsImgs){
-        if (goodsImgs[x].length === 0 ){
-            return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsImgs")
-        }
-    }
-
-    //-----------------------------------------------------参数检测-goodsDetail-------------------------------------------
-    let  { extraData , contentHtml } = goodsDetail
-
-    if (contentHtml.length === 0 ){
-         return utils.Error(null , ErrorCode.PARAM_ERROR , "contentHtml")
-    }
 
     //---------------------------------------------------------调用服务层-------------------------------------------------
     let  rs = await GoodsService.addGoods({
@@ -97,7 +126,18 @@ router.get("/detail/:goodsId" , async(req, res)=>{
     return res.json(rs)
 })
 
+/**
+ * @description 获取商品信息
+ */
+router.get("/info/:goodsId" , async(req , res)=>{
+    const {goodsId} = req.params ;
+    if (!goodsId || goodsId.length !== 24){
+        return utils.Error(null , ErrorCode.PARAM_ERROR, "goodsId")
+    }
+    let rs = await GoodsService.getGoodsInfoByGoodsId(goodsId)
+    return res.json(rs)
 
+})
 /**
  * @description 检索商品列表
  * @param orderBy 排序字段
