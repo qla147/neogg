@@ -10,7 +10,7 @@ const redisClient = new Redis({
     host: config.redis.host,
     port : config.redis.port,
     password : config.redis.password,
-    db: config.redis.db,
+    db: config.redis.db || 0 ,
     retryStrategy: config.redis.retryStrategy,
     maxRetriesPerRequest : config.maxRetriesPerRequest
 })

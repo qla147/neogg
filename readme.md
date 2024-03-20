@@ -568,11 +568,64 @@ OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
 #### 新增商品
 
 + desc 
+
 + router
+
 + method 
+
 + request param sample
+
+  ~~~json
+  {
+      "goodsInfo": {
+          "goodsType": "CAR",
+          "goodsName": "TOYOTA",
+          "goodsPrice": 1000000,
+          "goodsCount": 1000,
+          "goodsImgs": [
+              "https://p9-pc-sign.douyinpic.com/tos-cn-i-0813c001/d3a7899bfa5d41dd94e6bbb18f41a1d8~tplv-dy-aweme-images:q75.webp?biz_tag=aweme_images&from=3213915784&s=PackSourceEnum_AWEME_DETAIL&sc=image&se=false&x-expires=1713535200&x-signature=GTZVlxou69h8AWY%2FfLil6WDqlDA%3D"
+          ]
+      },
+      "goodsDetail": {
+          "extraData": "",
+          "contentHtml": "<p class=\"is-style-text-indent-2em \">火车还有六个小时才开，无聊就在候车厅呆呆，实在无聊了，就把自己的<a href=\"https://www.nange.cn/tag/%e8%8b%b1%e8%af%ad/\" title=\"【查看含有[英语]标签的文章】\" class=\"atags color-5\" target=\"_blank\">英语</a>词汇书拿出来看了起来，<a href=\"https://www.nange.cn/tag/%e8%8b%b1%e8%af%ad/\" title=\"【查看含有[英语]标签的文章】\" class=\"atags color-5\" target=\"_blank\">英语</a>老烂了，但为了解决无聊，就翻了几下。</p><p class=\"is-style-text-indent-2em\">忽然旁边坐过来一年轻小哥哥，瘦瘦的。看我拿本<a href=\"https://www.nange.cn/tag/%e8%8b%b1%e8%af%ad/\" title=\"【查看含有[英语]标签的文章】\" class=\"atags color-5\" target=\"_blank\">英语</a>书在看，就问我，“大学生在昆明读书啊？”，我看了一下他，不像是坏人，而且看起来也不讨厌，就弱弱地回答，“不是，在郑州。”</p>"
+      }
+  }
+  ~~~
+
+  
+
 + request param table 
+
+  | name        | in   | type          | parent      | required | validator                                                    | desc             |
+  | ----------- | ---- | ------------- | ----------- | -------- | ------------------------------------------------------------ | ---------------- |
+  | goodsInfo   | body | Object        | null        | true     | null                                                         | 商品基本信息     |
+  | goodsType   |      | String        | goodsInfo   | true     | Enums:["CAR","COMPUTER","FASHION","HEALTH CARE","FOOD","SPORT","ELECTRIC", "BOOK","ENTERTAIN","GAME","EDU","PET", "INSURANCE","OTHER" ] | 商品种类         |
+  | goodsName   |      | String        | goodsInfo   | true     | Length :[1, 200]                                             | 商品名称         |
+  | goodsPrice  |      | Number        | goodsInfo   | true     | More than zero                                               | 商品价格         |
+  | goodsCount  |      | Number        | goodsInfo   | true     | More than zero and less than 9999                            | 商品数量         |
+  | goodsImgs   |      | Array<String> | goodsInfo   | true     | The array`s length must be more than zero                    | 商品图片         |
+  | goodsDetail | body | Object        |             | true     | null                                                         | 商品详情         |
+  | extraData   |      | String        | goodsDetail | false    | null                                                         | 商品详情补充信息 |
+  | contentHtml |      | String        | goodsDetail | true     | More thant zero                                              | 商品介绍HTML     |
+  |             |      |               |             |          |                                                              |                  |
+
+  
+
 + response sample 
+
+  ~~~JSON
+  {
+      "msg": "ok",
+      "success": true,
+      "code": "100000",
+      "timeStamp": 1710948924166,
+      "error": null
+  }
+  
+  ~~~
+
+  
 
 #### 修改商品
 

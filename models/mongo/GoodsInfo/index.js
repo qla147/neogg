@@ -57,7 +57,7 @@ GoodsBasicInfo.index({goodsName : 1 ,goodsType : 1 , saleTime : -1 })
 
 const GoodsDetail = new Schema({
     goodsId :{
-        type: mongoose.Types.ObjectId,
+        type: Schema.Types.ObjectId,
         desc : "商品ID",
         ref : "goodsInfo",
         index: true ,
@@ -69,7 +69,7 @@ const GoodsDetail = new Schema({
         desc : "详情页面html文本"
     },
     extraData :{
-        type: mongoose.Types.Map,
+        type: Schema.Types.Map,
         desc :"渲染需要的参数"
     },
     createTime :{

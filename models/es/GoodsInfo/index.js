@@ -1,42 +1,31 @@
 const client = require("../../../common/db/es")
 const utils = require("../../../common/utils/utils");
-const {model} = require("mongoose");
 
 
 class GoodsInfoEs {
-    constructor(){
+    constructor() {
         this.type = "goods"
-        this.index = "goodsInfo"
-        this.mappingSetting ={
-            goods: {
-                properties: {
-                    goodsName: {
-                        type: 'text',
-                        fields: {
-                            raw: {
-                                type: "keyword"
-                            }
-                        } ,
-                        analyzer :"standard"
-                    },
-                    goodsType: {
-                        type: 'text' ,
-                        fields: {
-                            raw: {
-                                type: "keyword"
-                            }
-                        },
-                        analyzer :"standard"
-                    },
-                    goodsPrice: {
-                        type: 'long'
-                    },
-                    _id: {
-                        type: 'text',
-                        index : false
-                    },
-                }
+        this.index = "goods_info"
+        this.mappingSetting = {
+            properties: {
+                goodsName: {
+                    type: 'text',
+                    index: true,
+                },
+                goodsType: {
+                    type: 'text',
+                    index: true,
+                },
+                goodsPrice: {
+                    type: 'long'
+
+                },
+                id: {
+                    type: 'text',
+                    index: false
+                },
             }
+
         }
 
     }
@@ -47,8 +36,8 @@ class GoodsInfoEs {
      * @description  init the db schema
      * @returns {Promise<{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
      */
-    async init(){
-        try{
+    async init() {
+        try {
             // 初始化
             await client.indices.create({
                 index: this.index,
@@ -56,7 +45,8 @@ class GoodsInfoEs {
                     mappings: this.mappingSetting
                 }
             });
-        }catch (e) {
+            return utils.Success()
+        } catch (e) {
             console.error(e)
             return utils.Error(e)
         }
@@ -69,11 +59,11 @@ class GoodsInfoEs {
      * @description  save data into db
      * @returns {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
      */
-    async insert(goodsInfo){
-        try{
-            let rs = await client.index({index: this.index , type: this.type , body: goodsInfo})
+    async insert(goodsInfo) {
+        try {
+            let rs = await client.index({index: this.index, type: this.type, body: goodsInfo})
             return utils.Success(rs)
-        }catch (e) {
+        } catch (e) {
             console.error(e)
             return utils.Error(e)
         }
@@ -87,21 +77,17 @@ class GoodsInfoEs {
      * @param query query param
      * @returns {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
      */
-    async search (query){
-        try{
-            let result =await  client.search({
+    async search(query) {
+        try {
+            let result = await client.search({
                 index: this.index,
-                body:{
-                    query,
-                    type : "cross_fields",
-                    fields:["goodsName", "goodsType", "goodsPrice"],
-                    operator :"or",
-                    _source:["_id"]
+                body: {
+                    query
                 }
             })
 
             return utils.Success(result)
-        }catch (e) {
+        } catch (e) {
             console.error(e)
             return utils.Error(e)
         }
@@ -115,14 +101,14 @@ class GoodsInfoEs {
      * @param query search conditions
      * @returns {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
      */
-    async delete(query){
-        try{
+    async delete(query) {
+        try {
             let rs = await client.delete({
-                index: this.index ,
+                index: this.index,
                 query
             })
             return utils.Success(rs)
-        }catch (e) {
+        } catch (e) {
             console.error(e)
             return utils.Error(e)
         }
@@ -130,9 +116,9 @@ class GoodsInfoEs {
 
 }
 
-var goodsInfoEs ;
-module.exports = ()=>{
-    if (goodsInfoEs){
+var goodsInfoEs;
+module.exports = () => {
+    if (goodsInfoEs) {
         return goodsInfoEs
     }
     goodsInfoEs = new GoodsInfoEs()

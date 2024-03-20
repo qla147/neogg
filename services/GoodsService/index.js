@@ -5,6 +5,7 @@ const {GoodsNumRedisModel} = require("../../models/redis/GoodsInfo")
 const  GoodInfoEsModel= require("../../models/es/GoodsInfo")()
 const {GoodsLockRedisModel} = require("../../models/redis/GoodsInfo")
 const mongoose = require("../../common/db/mongo")
+const {multipart} = require("formidable/src/plugins");
 
 const service  = {}
 
@@ -152,11 +153,12 @@ service.updateGoods = async (goodsId , param )=>{
 service.addGoods = async (params)=>{
     let  session  ;
     try{
-        const {goodsInfo , goodsDetail } = params
+        let {goodsInfo , goodsDetail } = params
         //开启session
         session = await mongoose.startSession()
+        await session.startTransaction()
         // 检测商品是否已经存在
-        let goodsCount = await GoodsInfo.findOne({goodsName: goodsInfo.goodsInfo.goodsName } , {_id:1},{session})
+        let goodsCount = await GoodsInfo.findOne({goodsName: goodsInfo.goodsName } , {_id:1},{session})
         if (goodsCount){
             return utils.Error(null , ErrorCode.GOODS_INFO_EXIST)
         }
@@ -165,7 +167,7 @@ service.addGoods = async (params)=>{
 
         // 入库商品信息
         let goodsInfoModel  = new GoodsInfo(goodsInfo)
-        await goodsInfoModel.save({session})
+        goodsInfo = await goodsInfoModel.save({session})
 
         goodsDetail.goodsId = goodsInfo._id
         goodsDetail.createTime = Date.now()
@@ -183,7 +185,7 @@ service.addGoods = async (params)=>{
 
         // 入库es
         const {goodsType,goodsName, _id , goodsPrice} = goodsInfo
-        let goodsInfoEs = { goodsType, goodsName, _id:_id.toString(),goodsPrice}
+        let goodsInfoEs = { goodsType, goodsName, id:_id.toString(),goodsPrice}
 
         rs = await GoodInfoEsModel.insert(goodsInfoEs)
         if(!rs.success){
@@ -209,14 +211,29 @@ service.addGoods = async (params)=>{
 }
 
 
-service.search  = (searchParam)=>{
+service.search  = async (searchParam)=>{
     try{
         let {orderBy , orderSeries, quickSearch , goodsType , goodsName , maxGoodsPrice , minGoodsPrice, status , pageSize  , pageNo } = searchParam
 
+        if (quickSearch){
+            let query = {
+                "multi_match": {
+                    "query": quickSearch,
+                        "type": "most_fields",
+                        "operator":"or",
+                        "fields": ["goodsName", "goodsType"]
+                }
+            }
+
+             let esRs  = await GoodInfoEsModel.search(query)
+            
+            return utils.Success(rs)
+
+        }
 
 
 
-
+        return utils.Success()
 
     }catch (err) {
         console.error(err)

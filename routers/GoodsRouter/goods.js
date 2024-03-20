@@ -16,10 +16,10 @@ const checkGoodsInfoAndGoodsDetail = (goodsInfo , goodsDetail) =>{
     try{
         // ----------------------------------------------参数检测-goodsInfo---------------------------------------------------
         if (!goodsInfo){
-            return utils.Error(null , ErrorCode.PARAM_ERROR, "goodInfo")
+            return utils.Error(null , ErrorCode.PARAM_ERROR, "goodsInfo")
         }
 
-        if(goodsDetail){
+        if(!goodsDetail){
             return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsDetail")
         }
 

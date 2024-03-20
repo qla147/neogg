@@ -2,14 +2,12 @@ global.commonConfig = require("./config/shop.json")
 const initConfig = require("./initConfig")
 const utils = require("./common/utils/utils");
 const express = require('express');
-// const  path = require('path');
 const  logger = require('morgan');
-// var debug = require('debug')('neogg:server');
-// const {timer} = require("./services/TimerService/index")
-
+const path = require("path")
 
 // const  http = require('http');
 const fs = require("fs")
+const {createServer} = require("http");
 // const mongoose = require("mongoose");
 
 // var server
@@ -20,13 +18,16 @@ async function init(){
         require("./common/db/redis");
         require("./common/db/mongo");
         require("./common/db/es")
+        // const GoodsEsModel = require("./models/es/GoodsInfo")()
+        // await GoodsEsModel.init()
+
         const config = global._config
-        fs.access(config.filePath, fs.constants.F_OK, (err) => {
-            if (err) {
-                fs.mkdirSync(config.filePath, { recursive: true });
-            }
-        });
-        // console.log(global._config)
+        // fs.access(config.filePath, fs.constants.F_OK, (err) => {
+        //     if (err) {
+        //         fs.mkdirSync(config.filePath, { recursive: true });
+        //     }
+        // });
+        // // console.log(global._config)
 
         return utils.Success(null)
     }catch (e) {
@@ -34,9 +35,6 @@ async function init(){
         return utils.Error(e)
     }
 }
-
-
-
 
 
 
@@ -65,11 +63,11 @@ init().then(rs=>{
         next()
     })
     // 文件上传专用
-    app.use("/v1/api/goods",require("./routers/GoodsRouter/goods"))
+    app.use("/goods_server/v1/api/goods",require("./routers/GoodsRouter/goods"))
     // // 文件下载专用
     // app.use("/v1/api/file/download", require("./routers/FileRouter/fileDownload"))
     app.set('port', global._config.port);
-    const server = http.createServer(app);
+    const server = createServer(app);
 
 
     app.on("error",(err)=>{
@@ -80,11 +78,11 @@ init().then(rs=>{
     server.on('error', (err)=>{
         console.error(err)
     });
-    -
         // server.on("clientError",()=>{
         //     console.error("clientError")
         // })
         server.on('listening', ()=>{
+            console.log("server listent at ", global._config.port,global._config.host)
             // registered to consul
             // initConfig.afterInit().then(rs=>{
             //     if (!rs.success){

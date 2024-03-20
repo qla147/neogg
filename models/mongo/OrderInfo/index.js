@@ -3,7 +3,7 @@ const Schema = mongoose.Schema
 
 const OrderGoodsInfo = new Schema({
     goodsId : {
-        type : mongoose.Types.ObjectId,
+        type : Schema.Types.ObjectId,
         ref :"goodsInfo",
         desc :"商品信息ID"
     },
@@ -25,7 +25,7 @@ const OrderGoodsInfo = new Schema({
 
 const OrderInfo = new Schema({
     userId :{
-        type : mongoose.Types.ObjectId,
+        type : Schema.Types.ObjectId,
         desc : "用户ID",
         ref: "userInfo",
         required : true

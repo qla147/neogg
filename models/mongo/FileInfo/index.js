@@ -40,7 +40,7 @@ const FileInfoSchema = new Schema({
         desc :"该文件的子文件切片的数量"
     },
     userId :{
-        type : mongoose.Types.ObjectId,
+        type : Schema.Types.ObjectId,
         desc :"上传用户ID",
         ref: "userInfo"
     },
@@ -53,7 +53,7 @@ const FileInfoSchema = new Schema({
         desc :"创建时间"
     },
     fileId:{
-        type : mongoose.Types.ObjectId,
+        type : Schema.Types.ObjectId,
         ref :"file",
         desc :"文件物理存储表"
     }
