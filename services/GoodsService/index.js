@@ -2,10 +2,10 @@ const utils = require("../../common/utils/utils")
 const ErrorCode = require("../../common/const/ErrorCode")
 const {GoodsDetail, GoodsInfo} = require("../../models/mongo/GoodsInfo");
 const {GoodsNumRedisModel} = require("../../models/redis/GoodsInfo")
-const  GoodInfoEsModel= require("../../models/es/GoodsInfo")()
-const {GoodsLockRedisModel} = require("../../models/redis/GoodsInfo")
+const  GoodsInfoEsModel= require("../../models/es/GoodsInfo")()
+const {GoodsLockRedisModel, GoodsInfoRedisModel} = require("../../models/redis/GoodsInfo")
 const mongoose = require("../../common/db/mongo")
-const {multipart} = require("formidable/src/plugins");
+
 
 const service  = {}
 
@@ -14,7 +14,7 @@ const service  = {}
  * @desc  检测商品名称是否已经存在
  * @param goodsName {type: String, required : true } 商品名称
  * @param goodsId {type : Mongoose.Type.ObjectId, required : false }  商品ID
- * @param session {type : mongoose.sessionClient} mongo session
+ * @param session {type : mongoose.session} mongo session
  * @returns {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
  */
 async function checkGoodsName (goodsName , goodsId , session ) {
@@ -51,7 +51,7 @@ service.updateGoods = async (goodsId , param )=>{
 
         session = await  mongoose.startSession()
 
-        const {goodsInfo , goodsDetail } = param
+        let  {goodsInfo , goodsDetail } = param
 
         //----------------------------------------------------检测合理性--------------------------------------------------
 
@@ -90,26 +90,38 @@ service.updateGoods = async (goodsId , param )=>{
                 return utils.Error(null , ErrorCode.LOCK_GOODS_INFO, "Locked! Please try later!")
             }
         }
+        // 查询库存数量
+        let remainedGoodsNumRs = await GoodsNumRedisModel.getCount(goodsId)
+        if(!remainedGoodsNumRs.success){
+            return remainedGoodsNumRs
+        }
 
         // 检测商品数量变化是否合理
         let goodsCountGap = goodsInfo.goodsCount - oldGoodsInfo.goodsCount
         if (goodsCountGap < 0 ){
-            let remainedGoodsNumRs = await GoodsNumRedisModel.getCount(goodsId)
-            if(!remainedGoodsNumRs.success){
-                return remainedGoodsNumRs
-            }
-
             if (remainedGoodsNumRs.data + goodsCountGap < 0 ){
                 return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsCount")
             }
         }
 
+
+        if(remainedGoodsNumRs.data + goodsCountGap === 0){
+            // 售罄
+            goodsInfo.goodsStatus = 2
+        }else{
+            // 还有库存
+            goodsInfo.goodsStatus = 1
+        }
+
         // 商品信息和商品详情更新入库
         goodsInfo.createTime = Date.now()
-        await GoodsInfo.updateOne({_id: goodsId} , {$set: goodsInfo} , {upsert: false , WriteConcern:{w:"majority"} , session})
+        // 已经售出的数量不能更新
+        delete goodsInfo.SoldCount
+        goodsInfo = await GoodsInfo.findOneAndUpdate({_id: goodsId} , {$set: goodsInfo} , {new: true ,upsert: false , WriteConcern:{w:"majority"} , session})
 
         goodsDetail.goodsId = goodsId
         goodsDetail.createTime = Date.now()
+
         await GoodsDetail.updateOne({goodsId} , {$set: goodsDetail } , {upsert: false , WriteConcern:{w:"majority"} , session})
 
 
@@ -127,6 +139,8 @@ service.updateGoods = async (goodsId , param )=>{
                 }
             }
         }
+        // 写入缓存
+        await GoodsInfoRedisModel.insert(goodsInfo._id.toString(),goodsInfo)
 
         await session.commitTransaction()
         return utils.Success(null)
@@ -164,6 +178,7 @@ service.addGoods = async (params)=>{
         }
 
         goodsInfo.createTime = Date.now()
+        goodsInfo.goodsStatus = goodsCount > 0 ? 1 : 2 ;
 
         // 入库商品信息
         let goodsInfoModel  = new GoodsInfo(goodsInfo)
@@ -187,7 +202,7 @@ service.addGoods = async (params)=>{
         const {goodsType,goodsName, _id , goodsPrice} = goodsInfo
         let goodsInfoEs = { goodsType, goodsName, id:_id.toString(),goodsPrice}
 
-        rs = await GoodInfoEsModel.insert(goodsInfoEs)
+        rs = await GoodsInfoEsModel.insert(goodsInfoEs)
         if(!rs.success){
             // 回滚redis
             await GoodsNumRedisModel.removeAll(goodsInfo._id.toString())
@@ -195,6 +210,9 @@ service.addGoods = async (params)=>{
             await session.abortTransaction()
             return rs
         }
+
+        // 写入缓存
+        await GoodsInfoRedisModel.insert(goodsInfo._id.toString(),goodsInfo)
 
         await session.commitTransaction()
 
@@ -210,31 +228,89 @@ service.addGoods = async (params)=>{
     }
 }
 
-
+/**
+ * @description 用于分页检索
+ * @param searchParam {type: Object } 商品信息检索条件对象
+ * @returns {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
+ */
 service.search  = async (searchParam)=>{
     try{
-        let {orderBy , orderSeries, quickSearch , goodsType , goodsName , maxGoodsPrice , minGoodsPrice, status , pageSize  , pageNo } = searchParam
-
-        if (quickSearch){
-            let query = {
-                "multi_match": {
-                    "query": quickSearch,
+        let {orderBy , orderSeries, quickSearch , goodsType , goodsName , maxGoodsPrice , minGoodsPrice, goodsStatus , pageSize  , pageNo } = searchParam
+        // ------------------------------------------------------组装检索条件---------------------------------------------
+        let search = {}
+        if (quickSearch || goodsName){
+            // 有全文检索字段使用es检索
+            let query ;
+            if (goodsName){
+                query = {
+                    "multi_match": {
+                        "query": quickSearch,
                         "type": "most_fields",
                         "operator":"or",
                         "fields": ["goodsName", "goodsType"]
+                    }
                 }
+            } else{
+                 query = {
+                    "multi_match": {
+                        "query": goodsName ,
+                        "type": "most_fields",
+                        "operator":"or",
+                        "fields": ["goodsName"]
+                    }
+                }
+
             }
 
-             let esRs  = await GoodInfoEsModel.search(query)
-            
-            return utils.Success(rs)
 
+            let esRs  = await GoodsInfoEsModel.search(query)
+            let hits = esRs.data.hits.hits
+            let ids = []
+
+            for(const x in hits){
+                ids.push(hits[x]._source.id)
+            }
+
+            if (ids.length > 0 ){
+                search._id = {$in: ids }
+            }else{
+                return utils.Success({list:[], count:0 })
+            }
+        }
+
+        if (goodsType){
+            search.goodsType = goodsType
+        }
+
+        if(minGoodsPrice !== undefined ) {
+            search.goodsPrice = {$gte: minGoodsPrice}
+        }
+
+        if (maxGoodsPrice !== undefined){
+            search.goodsPrice = {$lte: maxGoodsPrice}
         }
 
 
+        if(goodsStatus !== undefined){
+            search.goodsStatus = goodsStatus
+        }
 
-        return utils.Success()
+        let sort = {}
+        if (orderSeries === "asc"){
+            sort[orderBy] = 1
+        }else{
+            sort[orderBy] = -1
+        }
 
+        // 检索数据库
+        let list = await GoodsInfo.find(search).sort(sort).skip(pageNo * pageSize ).limit(pageSize).lean();
+        let count ;
+        if(list.length <= pageSize &&  pageNo === 0){
+            count = list.length
+        }else{
+            count = await GoodsInfo.countDocuments(search)
+        }
+        return utils.Success({list, count})
     }catch (err) {
         console.error(err)
         return utils.Error(err)

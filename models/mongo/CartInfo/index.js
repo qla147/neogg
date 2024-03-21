@@ -8,6 +8,10 @@ const  CartInfoSchema = new Schema({
         desc : "商品ID",
         ref:"goodsInfo"
     },
+    goodsName :{
+        type:String ,
+        desc :"商品名称"
+    },
     count :{
         type : Number,
         min: 0 ,
@@ -20,7 +24,7 @@ const  CartInfoSchema = new Schema({
       ref: "userInfo",
       required : true
     },
-    addTime :{
+    createTime :{
         type: Number ,
         desc :"添加时间"
     }
@@ -32,5 +36,5 @@ CartInfoSchema.index({ userId : 1 , addTime : -1 })
 CartInfoSchema.index({ userId : 1})
 
 module.exports = {
-    CartInfo: mongoose.model("cart_info", CartInfoSchema)
+    CartInfoModel: mongoose.model("cart_info", CartInfoSchema)
 }

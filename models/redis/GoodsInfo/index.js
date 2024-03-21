@@ -3,6 +3,32 @@ const utils = require("../../../common/utils/utils")
 const ErrorCode = require("../../../common/const/ErrorCode")
 const config  = global._config
 
+
+const RedisTransaction = {
+    start: async ()=>{
+        try{
+            let rs = await  redisClient.multi({pipeline: false })
+            return utils.Success(rs)
+        }catch (e) {
+            console.error(e);
+            return utils.Error(e, ErrorCode.REDIS_ERROR)
+        }
+    },
+
+    commit:async ()=>{
+       return new Promise(resolve => {
+           redisClient.exec((err, result ) =>{
+               if (err){
+                   console.error(err)
+                   return resolve(utils.Error(err, ErrorCode.REDIS_ERROR))
+               }
+               return resolve(utils.Success(result))
+           })
+       })
+
+    }
+}
+
 const GoodsLockRedisModel = {
     lock: async(goodsId)=>{
         try{
@@ -148,4 +174,42 @@ const GoodsNumRedisModel = {
     }
 }
 
-module.exports = {GoodsNumRedisModel, GoodsLockRedisModel}
+const  GoodsInfoRedisModel  = {
+    // insert
+    insert :async (goodsId , goodsInfo)=> {
+        try{
+            let key = `goodsInfo:${goodsId}`
+            let rs = await redisClient.hmset(key, goodsInfo )
+            return utils.Success(rs)
+        }catch (e) {
+            console.error(e)
+            return utils.Error(e , ErrorCode.REDIS_ERROR)
+        }
+    },
+    get: async (goodsId)=>{
+        try{
+            let key = `goodsInfo:${goodsId}`
+            let rs = await redisClient.hgetall(key)
+            return utils.Success(rs)
+        }catch (e) {
+            console.error(e)
+            return utils.Error(e, ErrorCode.REDIS_ERROR)
+        }
+    },
+    updateField :async (goodsId , filedName , value )=>{
+        try{
+            let key = `goodsInfo:${goodsId}`
+            let rs = await redisClient.hset(key , filedName , value)
+            return utils.Success(rs)
+        }catch (e) {
+            console.error(e)
+            return utils.Error(e, ErrorCode.REDIS_ERROR)
+        }
+    },
+
+
+
+}
+
+
+module.exports = {GoodsNumRedisModel, GoodsLockRedisModel, RedisTransaction, GoodsInfoRedisModel}

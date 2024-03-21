@@ -25,13 +25,11 @@ redisClient.on("ready", function (){
     console.error( "Redis Client is ready")
 })
 
-
-redisClient.on("connect" , function (){
-    console.error("Redis Client Connected success")
-})
-
 redisClient.on("reconnecting", function (){
     console.error( "Redis Client is reconnecting !")
 })
+
+
+
 
 module.exports = redisClient

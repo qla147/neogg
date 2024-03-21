@@ -639,11 +639,46 @@ OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
 #### 商品列表(包含检索)
 
 + desc
+
 + router
+
 + method
-+ request param sample 
+
 + request param table 
+
 + response param  sample
+
+  ~~~json
+  {
+      "data": {
+          "list": [
+              {
+                  "_id": "65fb023b4218bcffbd02aa28",
+                  "goodsType": "CAR",
+                  "goodsName": "TOYOTA",
+                  "goodsPrice": 1000000,
+                  "goodsCount": 1000,
+                  "goodsImgs": [
+                      "https://p9-pc-sign.douyinpic.com/tos-cn-i-0813c001/d3a7899bfa5d41dd94e6bbb18f41a1d8~tplv-dy-aweme-images:q75.webp?biz_tag=aweme_images&from=3213915784&s=PackSourceEnum_AWEME_DETAIL&sc=image&se=false&x-expires=1713535200&x-signature=GTZVlxou69h8AWY%2FfLil6WDqlDA%3D"
+                  ],
+                  "SoldCount": 0,
+                  "createTime": 1710948923835,
+                  "__v": 0,
+                  "status": 1
+              }
+          ],
+          "count": 1
+      },
+      "msg": "ok",
+      "success": true,
+      "code": "100000",
+      "timeStamp": 1711027300006,
+      "error": null
+  }
+  ~~~
+
+  
+
 + response param table
 
 #### 根据商品ID获取商品信息

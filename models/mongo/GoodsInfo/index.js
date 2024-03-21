@@ -29,7 +29,7 @@ const GoodsBasicInfo = new Schema({
         type : String,
         desc : "商品图片"
     }],
-    status:{
+    goodsStatus:{
         type: Number ,
         desc :{
             detail : "商品状态",
@@ -39,7 +39,7 @@ const GoodsBasicInfo = new Schema({
                 2 : "售罄"
             }
         },
-        enum:[0,1,2,3]
+        enum:[1,2]
     },
     SoldCount:{
         type: Number,
