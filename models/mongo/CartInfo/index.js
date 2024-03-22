@@ -14,7 +14,7 @@ const  CartInfoSchema = new Schema({
     },
     count :{
         type : Number,
-        min: 0 ,
+        min: 1 ,
         max: 9999,
         desc :"商品数量"
     },

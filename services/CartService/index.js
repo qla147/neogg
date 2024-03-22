@@ -6,6 +6,136 @@ const {GoodsInfoRedisModel} = require("../../models/redis/GoodsInfo")
 const {GoodsInfo} = require("../../models/mongo/GoodsInfo");
 
 const service = {}
+/**
+ * @description 更新用户购物
+ * @param userInfo {type: Object} y用户信息
+ * @param cartInfos {type :Array} 购物车商品列表
+ * @return {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
+ */
+service.updateCart = async(userInfo , cartInfos)=>{
+    try{
+        let needDeleteGoods = []
+        let needChangedGoods = [] ;
+
+        const userId = userInfo._id
+
+        let originalCartList = await  CartInfoModel.find({userId} ,{_id: 1 , goodsId:1 , count:1}).lean()
+        if(originalCartList.length === 0 ){
+            return utils.Error(null , ErrorCode.CART_INFO_NOT_FOUND)
+        }
+
+        // 判断需要变更的商品
+        for (const x in cartInfos){
+            let cartInfo = originalCartList.find((t)=>{
+                return t._id.toString() === cartInfo[x]
+            })
+            // 商品数量不相等就是要更新
+            if (cartInfo || cartInfo.count !== cartInfos[x].count ){
+                needChangedGoods.push(cartInfos[x])
+            }
+        }
+
+        // 判断需要删除的商品
+        for(const x in originalCartList){
+            let cartInfo= cartInfos.find((t)=>{
+                return t._id === originalCartList[x]._id.toString()
+            })
+
+            if(!cartInfo){
+                needDeleteGoods.push(originalCartList[x]._id)
+            }
+        }
+
+
+        // 把更新删除任务放入数组使用promise 同时异步执行
+        let tasks = []
+
+        if (needDeleteGoods.length > 0 ){
+            tasks.push(CartInfoModel.deleteMany({_id:{$in: needDeleteGoods}}))
+        }
+
+        for(const x in needChangedGoods){
+            tasks.push(CartInfoModel.updateOne({_id: needChangedGoods[x]._id},{$set:{count: needChangedGoods[x].count}}))
+        }
+
+        if(tasks.length ){
+            let results  = await Promise.allSettled(tasks)
+            for(const x in results){
+                if (results[x].status !== "fulfilled"){
+                    return utils.Error(results[x].reason)
+                }
+            }
+        }
+
+        return utils.Success()
+
+    }catch (e) {
+        console.error(e)
+        return utils.Error(e)
+    }
+}
+
+
+/**
+ * @description 更新指定购物车商品的数量
+ * @param userInfo {type: Object} 用户信息
+ * @param cartId {type: Mongoose.Types.ObjectId} 购物车商品ID
+ * @param cartInfo {type : CartInfoModel} 商品信息
+ * @return {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
+ */
+service.updateGoodsFromCart = async(userInfo ,cartId, cartInfo )=>{
+    try{
+        const {goodsId , count } = cartInfo ;
+
+        let originalCartInfo = await CartInfoModel.findOneAndUpdate({_id: cartId , userId : userInfo._id , goodsId},{$set: {count} }, {upsert:false , new:true })
+
+        if(!originalCartInfo){
+            return utils.Error(null , ErrorCode.CART_INFO_NOT_FOUND)
+        }
+        return utils.Success(originalCartInfo)
+    }catch (e) {
+        console.error(e)
+        return utils.Error(e)
+    }
+}
+
+
+
+/**
+ * @description  清空用户购物车
+ * @param userInfo {type : Object } 用户信息
+ * @return {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
+ */
+service.clearCart = async (userInfo)=>{
+    try{
+        let userId  = userInfo._id
+        let rs = await CartInfoModel.deleteMany({userId})
+        return utils.Success(rs)
+    }catch (e) {
+        console.log(e)
+        return utils.Error(e)
+    }
+}
+
+
+
+/**
+ * @description 删除用户指定购物车中的商品
+ * @param userInfo {type : Object } 用户信息
+ * @param cartId {type: Mongoose.Schema.Types.ObjectId} 商品购物车ID
+ * @return {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
+ */
+service.deleteGoodsFromCart = async (userInfo , cartId)=>{
+    try{
+        let userId = userInfo._id
+        let rs =  await CartInfoModel.findOneAndDelete({_id: cartId , userId})
+        return utils.Success(rs)
+    }catch (e) {
+        console.error(e)
+        return utils.Error(e)
+    }
+}
+
 
 /**
  * @description 添加商品到购物车

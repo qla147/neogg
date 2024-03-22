@@ -7,6 +7,9 @@ const Code =  {
     "LOCK_GOODS_INFO": "200", // 商品被锁住，请稍后再试
 
 
+    "CART_INFO_NOT_FOUND":"300", // 购物车内指定商品没有找到
+
+
     "INTERNAL_ERROR": "500", // 内部错误
     "MONGODB_ERROR": "501" ,    //mongodb 错误
     "REDIS_ERROR":" 502",   // redis 错误
