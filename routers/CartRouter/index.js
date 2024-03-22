@@ -63,8 +63,6 @@ router.get("/" , async (req, res )=>{
     let rs = await CartService.search(userInfo , searchParam)
 
     return res.json(rs)
-
-
 })
 
 /**
@@ -157,7 +155,7 @@ router.put("/:cartId" , async(req, res)=>{
 
 
 /**
- * @description 修改整个购物内部商品
+ * @description 修改整个购物车内部商品
  */
 router.put("/" , async(req, res)=>{
     let userInfo = req.userInfo
@@ -187,6 +185,7 @@ router.put("/" , async(req, res)=>{
             cartInfos[x].count = count
         }
     }
+
     let rs ;
     if (cartInfos.length === 0 ){
         // 商品被清理完了 肯定是清空购物车

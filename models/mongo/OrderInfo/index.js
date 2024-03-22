@@ -1,4 +1,5 @@
 const  mongoose = require("../../../common/db/mongo")
+const {mongo} = require("mongoose");
 const Schema = mongoose.Schema
 
 const OrderGoodsInfo = new Schema({
@@ -16,7 +17,11 @@ const OrderGoodsInfo = new Schema({
         desc :"商品数量",
         min: 0
     },
-    price :{
+    goodsImgs :{
+        type : Schema.Types.Array,
+        desc:"商品的图片"
+    },
+    goodsPrice :{
         type : Number ,
         desc :"商品单价",
         min: 0
@@ -38,17 +43,18 @@ const OrderInfo = new Schema({
         type : Number ,
         desc : "过期时间",
     },
-    status :{
+    orderStatus :{
         type: Number  ,
-        enum:[0,1,2,3],
+        enum:[0,1,2,3,4],
         default : 0 ,
         desc :{
             detail : "订单状态",
             enums :{
                 0: "待支付",
+                1: "取消",
+                2: "失效",
                 3: "支付成功",
-                2: "过期",
-                1: "取消"
+                4: "退货退款"
             }
         }
     },
@@ -56,6 +62,10 @@ const OrderInfo = new Schema({
         type : Number ,
         desc :"订单金额",
         min: 0
+    },
+    totalCount:{
+        type: Schema.Types.Number,
+        desc: "订单商品数量"
     },
     goodsInfos : {
         type: [OrderGoodsInfo],
@@ -66,10 +76,24 @@ const OrderInfo = new Schema({
       desc :"支付时间"
     },
     payMethod :{
-        type : String ,
-        desc :"支付方式"
+        type : Number ,
+        enum:[1,2,3,4],
+        desc : {
+            detail:"支付方式",
+            enums:{
+                1: "digital wallet",
+                2: "credit card",
+                3: "bitcoin",
+                4: "wechat",
+            }
+        }
     }
 },{collection: "orderInfo"})
 
 OrderInfo.index({userId :1 ,createTime : -1 })
 OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
+
+
+module.exports =  {
+    OrderInfoMongodModel : mongoose
+}
