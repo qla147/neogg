@@ -67,10 +67,10 @@ const GoodsLockRedisModel = {
 
     }
 
-
-
-
 }
+
+
+
 
 
 const GoodsNumRedisModel = {
@@ -105,6 +105,7 @@ const GoodsNumRedisModel = {
 
             if (num === 1){
                 if (rs[1] !== null){
+                    await GoodsInfoRedisModel.updateField()
                     return utils.Success(true)
                 }else{
                     return utils.Error(null , ErrorCode.GOODS_OUT_OF_STOCK)

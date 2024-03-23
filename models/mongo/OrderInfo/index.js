@@ -44,7 +44,7 @@ const OrderInfo = new Schema({
     },
     orderStatus :{
         type: Number  ,
-        enum:[0,1,2,3,4],
+        enum:[0,1,2,3,4,5],
         default : 0 ,
         desc :{
             detail : "订单状态",
@@ -53,7 +53,8 @@ const OrderInfo = new Schema({
                 1: "取消",
                 2: "失效",
                 3: "支付成功",
-                4: "退货退款"
+                4: "退货退款",
+                5:"完成"
             }
         }
     },
@@ -87,12 +88,13 @@ const OrderInfo = new Schema({
             }
         }
     }
-},{collection: "order_info"})
+})
 
 OrderInfo.index({userId :1 ,createTime : -1 })
 OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
 
 
 module.exports =  {
-    OrderInfoMongoModel : mongoose.model("order_info", OrderInfo)
+    OrderInfoMongoModel : mongoose.model("order_info", OrderInfo, "order_info" ),
+    OrderInfoBackUpMongoModel :  mongoose.model("order_info_back", OrderInfo, "order_info_back")
 }

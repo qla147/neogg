@@ -94,18 +94,37 @@ router.post("/" , async (req, res) =>{
 
 
 /**
- * @description 删除订单
+ * @description 删除订单, 删除是不可能删除掉  换个地方存起来
  */
-router.delete("/:orderId" , async()=>{
+router.delete("/:orderId" , async(req, res)=>{
+    let userInfo = req.userInfo
+    let {orderId} = req.params
 
+    if(!mongoose.isValidObjectId(orderId)){
+        return res.json(utils.Error(null , ErrorCode.PARAM_ERROR , "orderId"))
+    }
 
+    let rs = await OrderService.deleteOne(userInfo , orderId)
+    return res.json(rs)
 })
 
-/**
- * @description 获取订单详情
- */
-router.get("/:orderId", async(req, res)=>{
 
+
+/**
+ * @description 取消订单
+ */
+router.put("/:orderId/cancel" , async(req, res)=>{
+    let userInfo = req.userInfo
+    let {orderId} = req.params
+    let orderInfo = req.body
+
+
+    if(!mongoose.isValidObjectId(orderId)){
+        return res.json(utils.Error(null , ErrorCode.PARAM_ERROR , "orderId"))
+    }
+
+    let rs = await OrderService.cancelOrder(userInfo , orderId)
+    return res.json(rs)
 })
 
 

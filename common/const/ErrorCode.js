@@ -11,6 +11,15 @@ const Code =  {
     "CART_INFO_NOT_FOUND":"300", // 购物车内指定商品没有找到
 
 
+    "ORDER_INFO_NOT_FOUND": "400",// 订单信息没有找到
+    "ORDER_STATUS_NOT_KNOWN": "401",// 订单状态未知
+    "ORDER_STATUS_CANCELED" :"402", // 订单已经取消
+    "ORDER_STATUS_REFUND" :"403", // 订单已经退货退款
+    "ORDER_STATUS_PAYED" :"404" , // 订单已经支付，如需要取消请走退款通道
+    "ORDER_STATUS_COMPLETED":"405", // 订单已经完成，请走退货退款流程
+    "ORDER_STATUS_INVALIDATION":"406", // 订单已经失效
+
+
     "INTERNAL_ERROR": "500", // 内部错误
     "MONGODB_ERROR": "501" ,    //mongodb 错误
     "REDIS_ERROR":" 502",   // redis 错误
