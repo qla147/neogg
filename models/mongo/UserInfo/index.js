@@ -1,4 +1,5 @@
 const  mongoose = require("../../../common/db/mongo")
+const phoneUtil = require('google-libphonenumber').PhoneNumberUtil.getInstance();
 const Schema = mongoose.Schema
 
 const UserInfo = new Schema({
@@ -13,8 +14,29 @@ const UserInfo = new Schema({
     },
     userStatus:{
         type: String,
-        desc :"用户状态"
+        enum :[0,1],
+        desc :{
+            detail: "用户状态",
+            0: "停止使用",
+            1: "正常"
+        }
     },
+    userTelNo:{
+        type : String ,
+        desc :"用户电话号码",
+        validate:(val)=>{
+            return !phoneUtil.isValidNumber(val)
+        }
+    },
+    userEmail:{
+      type: String
+
+    },
+    userWallet:{
+        type: Number,
+        desc : "用户钱包"
+    }
+
 
 
 
