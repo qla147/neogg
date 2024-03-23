@@ -62,8 +62,14 @@ init().then(rs=>{
         console.error(req.url)
         next()
     })
-    // 文件上传专用
-    app.use("/goods_server/v1/api/goods",require("./routers/GoodsRouter/goods"))
+    // 商品相关
+    app.use("/shop/v1/api/goods",require("./routers/GoodsRouter/goods"))
+    // 订单和支付相关
+    app.use("/shop/v1/api/orderAndPay" , require("./routers/OrderRouter"))
+    // 购物车相关
+    app.use("/shop/v1/api/cart", require("./routers/CartRouter"))
+
+
     // // 文件下载专用
     // app.use("/v1/api/file/download", require("./routers/FileRouter/fileDownload"))
     app.set('port', global._config.port);

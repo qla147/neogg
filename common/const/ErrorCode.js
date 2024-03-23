@@ -2,6 +2,7 @@ const Code =  {
     "GOODS_DETAIL_NOT_FOUND" :"100", // 商品详情没有找到
     "GOODS_INFO_NOT_FOUND" :"101", // 商品信息没有找到
     "GOODS_INFO_EXIST": "102",      // 商品已经存在
+    "GOODS_OUT_OF_STOCK" :"103",    // 商品库存不足无法下定
 
 
     "LOCK_GOODS_INFO": "200", // 商品被锁住，请稍后再试

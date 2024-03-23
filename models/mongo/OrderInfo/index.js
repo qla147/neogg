@@ -1,5 +1,4 @@
 const  mongoose = require("../../../common/db/mongo")
-const {mongo} = require("mongoose");
 const Schema = mongoose.Schema
 
 const OrderGoodsInfo = new Schema({
@@ -12,7 +11,7 @@ const OrderGoodsInfo = new Schema({
         type : String ,
         desc :"商品名称"
     },
-    count :{
+    goodsCount :{
         type : Number ,
         desc :"商品数量",
         min: 0
@@ -67,7 +66,7 @@ const OrderInfo = new Schema({
         type: Schema.Types.Number,
         desc: "订单商品数量"
     },
-    goodsInfos : {
+    orderGoodsInfo : {
         type: [OrderGoodsInfo],
         desc :"订单包含商品列表"
     },
@@ -88,12 +87,12 @@ const OrderInfo = new Schema({
             }
         }
     }
-},{collection: "orderInfo"})
+},{collection: "order_info"})
 
 OrderInfo.index({userId :1 ,createTime : -1 })
 OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
 
 
 module.exports =  {
-    OrderInfoMongodModel : mongoose
+    OrderInfoMongoModel : mongoose.model("order_info", OrderInfo)
 }

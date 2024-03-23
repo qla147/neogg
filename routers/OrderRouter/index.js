@@ -3,7 +3,15 @@ const {models} = require("mongoose");
 const router = express.Router()
 const utils = require("../../common/utils/utils")
 const ErrorCode  = require("../../common/const/ErrorCode")
-const OrderService = require("../../services/")
+const OrderService = require("../../services/OrderService")
+const mongoose = require("mongoose");
+const {GoodsInfo} = require("../../models/mongo/GoodsInfo");
+
+
+
+
+
+
 /**
  * @description 获取取订单列表
  */
@@ -53,9 +61,34 @@ router.get("/" , async(req , res)=>{
  * description 新增订单
  */
 router.post("/" , async (req, res) =>{
+    let userInfo  = req.userInfo
+    let goodsInfos = req.body
+    if (!Array.isArray(goodsInfos) || goodsInfos.length === 0 ){
+        return res.json(utils.Error(null , ErrorCode.PARAM_ERROR , "goodsInfos"))
+    }
 
 
+    for(const x in goodsInfos){
+        let  {goodsId , goodsCount } = goodsInfos[x]
+        if (!mongoose.isValidObjectId(goodsId)){
+            return res.json(utils.Error(null ,ErrorCode.PARAM_ERROR , "goodsInfos.goodsId"))
+        }
 
+        if (isNaN(goodsCount)){
+            return res.json(utils.Error(null ,ErrorCode.PARAM_ERROR , "goodsInfos.goodsCount"))
+        }
+
+        if(typeof goodsCount === "string"){
+            goodsInfos[x].goodsCount = parseInt(goodsCount)
+        }
+
+        if( goodsInfos[x].goodsCount <= 0 ){
+            return res.json(utils.Error(null , ErrorCode.PARAM_ERROR , "goodsInfos.goodsCount"))
+        }
+    }
+
+    let rs = await OrderService.addOrder(userInfo , goodsInfos)
+    return res.json(rs)
 })
 
 

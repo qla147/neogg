@@ -53,8 +53,21 @@ const GoodsLockRedisModel = {
             console.error(e)
             return utils.Error(e, ErrorCode.REDIS_ERROR)
         }
+    },
+    status : async (goodsId)=>{
+        try{
+            let key = "lock:"+goodsId
+            let rs = await redisClient.exists(key)
+
+
+        }catch (e) {
+            console.error(e)
+            return utils.Error(e)
+        }
 
     }
+
+
 
 
 }
@@ -81,11 +94,38 @@ const GoodsNumRedisModel = {
           return utils.Error(e, ErrorCode.REDIS_ERROR)
       }
     },
-    // 出库一个商品
-    removeOne : async (goodsId ) =>{
+    // 出库一/n个商品
+    checkout : async (goodsId , num = 1) =>{
         try{
-            let rs = await redisClient.rpop("goodsNum:"+goodsId)
-            return utils.Success(rs)
+            let rs = await redisClient.rpop("goodsNum:"+goodsId, num )
+            const error  = rs[0];
+            if (error){
+                return utils.Error(error, ErrorCode.REDIS_ERROR)
+            }
+
+            if (num === 1){
+                if (rs[1] !== null){
+                    return utils.Success(true)
+                }else{
+                    return utils.Error(null , ErrorCode.GOODS_OUT_OF_STOCK)
+                }
+            }else{
+                // 全部没有取出来
+                if(rs[1] !== null ){
+                    return utils.Error(null , ErrorCode.GOODS_OUT_OF_STOCK)
+                }
+
+
+                if(rs[1].length !== num ){
+                    //部分取出来了
+                    // 回退湖区
+                    await redisClient.lpush(key, rs[1])
+                    return utils.Error(null , ErrorCode.GOODS_OUT_OF_STOCK)
+                }else{
+                    return utils.Success(true)
+                }
+
+            }
         }catch (e) {
             console.error(e)
             return utils.Error(e, ErrorCode.REDIS_ERROR )
@@ -121,14 +161,14 @@ const GoodsNumRedisModel = {
             while(index > 0 ){
                 indexes.push(1)
                 if(indexes.length > 5){
-                    await redisClient.lpush(key, ...indexes)
+                    await redisClient.lpush(key, indexes)
                     indexes = []
                 }
                 index--
             }
 
             if (indexes.length > 0){
-                await redisClient.lpush(key , ...indexes)
+                await redisClient.lpush(key , indexes)
             }
 
             return utils.Success(null )
@@ -196,20 +236,20 @@ const  GoodsInfoRedisModel  = {
             return utils.Error(e, ErrorCode.REDIS_ERROR)
         }
     },
-    updateField :async (goodsId , filedName , value )=>{
+    updateField :async (goodsId , keyValueMap )=>{
         try{
             let key = `goodsInfo:${goodsId}`
-            let rs = await redisClient.hset(key , filedName , value)
+            let rs = await redisClient.hset(key , keyValueMap)
             return utils.Success(rs)
         }catch (e) {
             console.error(e)
             return utils.Error(e, ErrorCode.REDIS_ERROR)
         }
-    },
-
-
-
+    }
 }
+
+
+
 
 
 module.exports = {GoodsNumRedisModel, GoodsLockRedisModel, RedisTransaction, GoodsInfoRedisModel}

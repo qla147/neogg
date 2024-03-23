@@ -41,7 +41,7 @@ const GoodsBasicInfo = new Schema({
         },
         enum:[1,2]
     },
-    SoldCount:{
+    soldCount:{
         type: Number,
         desc:"售卖的数量",
         default: 0

@@ -124,7 +124,6 @@ service.updateGoods = async (goodsId , param )=>{
 
         await GoodsDetail.updateOne({goodsId} , {$set: goodsDetail } , {upsert: false , WriteConcern:{w:"majority"} , session})
 
-
         // 商品数量发生变化
         if(goodsCountGap !== 0  ){
             if(goodsCountGap > 0 ){
@@ -147,6 +146,9 @@ service.updateGoods = async (goodsId , param )=>{
 
     }catch (e) {
         console.error(e)
+        if(session){
+            await session.abortTransaction()
+        }
         return utils.Error(e)
     }finally {
 
