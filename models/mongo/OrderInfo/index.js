@@ -54,11 +54,11 @@ const OrderInfo = new Schema({
                 2: "失效",
                 3: "支付成功",
                 4: "退货退款",
-                5:"完成"
+                5: "完成"
             }
         }
     },
-    totalPrices:{
+    totalPrice:{
         type : Number ,
         desc :"订单金额",
         min: 0

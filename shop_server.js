@@ -3,32 +3,43 @@ const initConfig = require("./initConfig")
 const utils = require("./common/utils/utils");
 const express = require('express');
 const  logger = require('morgan');
-const path = require("path")
-
+// const path = require("path")
+// const v8Profiler = require('v8-profiler-next');
+// const fs = require("fs")
+// v8Profiler.setGenerateType(1);
+// v8Profiler.startProfiling(global.commonConfig.serverName, true);
+//
+// v8Profiler.startProfiling(global.commonConfig.serverName, true);
+// setTimeout(() => {
+//     const profile = v8Profiler.stopProfiling(global.commonConfig.serverName);
+//     profile.export(function (error, result) {
+//         // if it doesn't have the extension .cpuprofile then
+//         // chrome's profiler tool won't like it.
+//         // examine the profile:
+//         //   Navigate to chrome://inspect
+//         //   Click Open dedicated DevTools for Node
+//         //   Select the profiler tab
+//         //   Load your file
+//         fs.writeFileSync(`${global.commonConfig.serverName}.cpuprofile`, result);
+//         profile.delete();
+//     });
+// }, 10 * 1000);
 // const  http = require('http');
-const fs = require("fs")
+//
 const {createServer} = require("http");
 // const mongoose = require("mongoose");
 
 // var server
-
+/**
+ * @description 初始化服务器各项配置
+ * @return {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
+ */
 async function init(){
     try{
         await  initConfig.init()
         require("./common/db/redis");
         require("./common/db/mongo");
         require("./common/db/es")
-        // const GoodsEsModel = require("./models/es/GoodsInfo")()
-        // await GoodsEsModel.init()
-
-        const config = global._config
-        // fs.access(config.filePath, fs.constants.F_OK, (err) => {
-        //     if (err) {
-        //         fs.mkdirSync(config.filePath, { recursive: true });
-        //     }
-        // });
-        // // console.log(global._config)
-
         return utils.Success(null)
     }catch (e) {
         console.error(e)
@@ -63,11 +74,11 @@ init().then(rs=>{
         next()
     })
     // 商品相关
-    app.use("/shop/v1/api/goods",require("./routers/GoodsRouter/goods"))
+    app.use("/shop/v1/api/goods",userCheckMiddleware,require("./routers/GoodsRouter/goods"))
     // 订单和支付相关
-    app.use("/shop/v1/api/orderAndPay" , require("./routers/OrderRouter"))
+    app.use("/shop/v1/api/orderAndPay" ,userCheckMiddleware, require("./routers/OrderRouter"))
     // 购物车相关
-    app.use("/shop/v1/api/cart", require("./routers/CartRouter"))
+    app.use("/shop/v1/api/cart",userCheckMiddleware, require("./routers/CartRouter"))
 
 
     // // 文件下载专用

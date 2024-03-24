@@ -116,8 +116,6 @@ router.delete("/:orderId" , async(req, res)=>{
 router.put("/:orderId/cancel" , async(req, res)=>{
     let userInfo = req.userInfo
     let {orderId} = req.params
-    let orderInfo = req.body
-
 
     if(!mongoose.isValidObjectId(orderId)){
         return res.json(utils.Error(null , ErrorCode.PARAM_ERROR , "orderId"))
@@ -132,9 +130,20 @@ router.put("/:orderId/cancel" , async(req, res)=>{
  *  @description 支付订单
  */
 router.post("/:orderId/pay" ,async (req , res)=>{
+    const userInfo = req.userInfo
+    const {orderId} = req.params
+    const {payMethod} = req.body
+    if(!mongoose.isValidObjectId(orderId)){
+        return res.json(utils.Error(null , ErrorCode.PARAM_ERROR , "orderId"))
+    }
 
+    if(payMethod !== 1 ){
+        return res.json(utils.Error(null , ErrorCode.ORDER_PAY_METHOD_ONLY_SUPPORT_DIGITAL_WALLET))
+    }
 
-
+    // 支付订单
+    let rs = await OrderService.payOrder(userInfo , orderId , payMethod)
+    return res.json(rs)
 })
 
 /**

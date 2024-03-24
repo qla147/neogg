@@ -74,13 +74,13 @@ const checkGoodsInfoAndGoodsDetail = (goodsInfo , goodsDetail) =>{
         if (contentHtml.length === 0 ){
             return utils.Error(null , ErrorCode.PARAM_ERROR , "contentHtml")
         }
-
+        goodsInfo = {}
         goodsInfo["goodsType"] = goodsType
         goodsInfo["goodsName"] = goodsName
         goodsInfo["goodsPrice"] = goodsPrice
         goodsInfo["goodsCount"] = goodsCount
         goodsInfo["goodsImgs"] = goodsImgs
-
+        goodsDetail = {}
         goodsDetail["extraData"] = extraData
         goodsDetail["contentHtml"] = contentHtml
 
@@ -143,7 +143,7 @@ router.post("/" , async (req , res)=>{
  * @description 根据商品ID 获取商品详情
  * @param goodsId  商品ID
  */
-router.get("/detail/:goodsId" , async(req, res)=>{
+router.get("/:goodsId/detail" , async(req, res)=>{
     const {goodsId} = req.params ;
     if (!goodsId || goodsId.length !== 24){
         return utils.Error(null , ErrorCode.PARAM_ERROR, "goodsId")
@@ -155,7 +155,7 @@ router.get("/detail/:goodsId" , async(req, res)=>{
 /**
  * @description 获取商品信息
  */
-router.get("/info/:goodsId" , async(req , res)=>{
+router.get("/:goodsId" , async(req , res)=>{
     const {goodsId} = req.params ;
     if (!goodsId || goodsId.length !== 24){
         return utils.Error(null , ErrorCode.PARAM_ERROR, "goodsId")
@@ -171,11 +171,11 @@ router.get("/info/:goodsId" , async(req , res)=>{
  * @param quickSearck 快捷模糊查询 支持 goodsType goodsName goodsPrice
  * @param maxGoodsPrice 最高商品价格
  * @param miniGoodsPrice 最低商品价格
- * @param status 商品状态 1:在售 ;2:售罄
+ * @param goodsStatus 商品状态 1:在售 ;2:售罄
  * @param pageSize pageNo 分页参数
  */
 router.get("/" , async (req , res) =>{
-    let { orderBy = "createTime" , orderSeries = "desc", quickSearch , goodsType , goodsName , maxGoodsPrice , minGoodsPrice, status , pageSize , pageNo } = req.query
+    let { orderBy = "createTime" , orderSeries = "desc", quickSearch , goodsType  , maxGoodsPrice , minGoodsPrice, goodsStatus , pageSize , pageNo } = req.query
     // ----------------------------------------------------------------参数检验和校正-------------------------------------
     if (!!orderBy && !["goodsPrice","goodsName", "goodsType", "createTime"].includes(orderBy)){
         return res.json(utils.Error(null , ErrorCode.PARAM_ERROR, "orderBy"))
@@ -197,8 +197,8 @@ router.get("/" , async (req , res) =>{
         return res.json(utils.Error(null , ErrorCode.PARAM_ERROR, "goodsType"))
     }
 
-    if (!!status && !([1, 2].includes(status) || ["1" , "2"].includes(status) )){
-        return res.json(utils.Error(null , ErrorCode.PARAM_ERROR, "status"))
+    if (!!goodsStatus && !([1, 2].includes(goodsStatus) || ["1" , "2"].includes(goodsStatus) )){
+        return res.json(utils.Error(null , ErrorCode.PARAM_ERROR, "goodsStatus"))
     }
 
 
@@ -227,7 +227,7 @@ router.get("/" , async (req , res) =>{
         pageNo = 0
     }
 
-    let searchParam  = {orderBy , orderSeries, quickSearch , goodsType , goodsName , maxGoodsPrice , minGoodsPrice, status , pageSize  , pageNo }
+    let searchParam  = {orderBy , orderSeries, quickSearch , goodsType  , maxGoodsPrice , minGoodsPrice, goodsStatus , pageSize  , pageNo }
     // 进入服务层
     let rs = await GoodsService.search(searchParam)
     return res.json(rs)

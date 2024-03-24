@@ -32,12 +32,12 @@ const RedisTransaction = {
 const GoodsLockRedisModel = {
     lock: async(goodsId)=>{
         try{
-            let key = "lock:"+goodsId
+            let key = `lock:goods:${goodsId}`
             let rs = await redisClient.setnx(key, 1)
             if (rs === 1){
                 await redisClient.expire(key , 30 )
-                return utils.Success(rs)
             }
+            return utils.Success(rs)
 
         }catch (e) {
             console.error(e);
@@ -47,7 +47,8 @@ const GoodsLockRedisModel = {
 
     unlock : async (goodsId) =>{
         try {
-            let rs = await redisClient.del( "lock:"+goodsId)
+            let key = `lock:goods:${goodsId}`
+            let rs = await redisClient.del( key)
             return utils.Success(rs)
         }catch (e) {
             console.error(e)
@@ -56,10 +57,10 @@ const GoodsLockRedisModel = {
     },
     status : async (goodsId)=>{
         try{
-            let key = "lock:"+goodsId
+            // let key = "lock:"+goodsId
+            let key = `lock:goods:${goodsId}`
             let rs = await redisClient.exists(key)
-
-
+            return utils.Success(rs)
         }catch (e) {
             console.error(e)
             return utils.Error(e)

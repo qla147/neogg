@@ -501,7 +501,7 @@ const OrderInfo = new Schema({
             }
         }
     },
-    totalPrices:{
+    totalPrice:{
         type : Number ,
         desc :"订单金额",
         min: 0
@@ -571,26 +571,32 @@ OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
 
 + router
 
+  /shop/v1/api/goods
+
 + method 
+
+  POST
 
 + request param sample
 
   ~~~json
-  {
+  curl --location 'http://192.168.2.2:8090/shop/v1/api/goods' \
+  --header 'Content-Type: application/json' \
+  --data '{
       "goodsInfo": {
           "goodsType": "CAR",
-          "goodsName": "TOYOTA",
-          "goodsPrice": 1000000,
-          "goodsCount": 1000,
+          "goodsName": "PROSCHE",
+          "goodsPrice": 111900000,
+          "goodsCount": 10,
           "goodsImgs": [
-              "https://p9-pc-sign.douyinpic.com/tos-cn-i-0813c001/d3a7899bfa5d41dd94e6bbb18f41a1d8~tplv-dy-aweme-images:q75.webp?biz_tag=aweme_images&from=3213915784&s=PackSourceEnum_AWEME_DETAIL&sc=image&se=false&x-expires=1713535200&x-signature=GTZVlxou69h8AWY%2FfLil6WDqlDA%3D"
+              "https://img2.baidu.com/it/u=1275372190,3235868667&fm=253&fmt=auto&app=120&f=JPEG?w=889&h=500"
           ]
       },
       "goodsDetail": {
           "extraData": "",
           "contentHtml": "<p class=\"is-style-text-indent-2em \">火车还有六个小时才开，无聊就在候车厅呆呆，实在无聊了，就把自己的<a href=\"https://www.nange.cn/tag/%e8%8b%b1%e8%af%ad/\" title=\"【查看含有[英语]标签的文章】\" class=\"atags color-5\" target=\"_blank\">英语</a>词汇书拿出来看了起来，<a href=\"https://www.nange.cn/tag/%e8%8b%b1%e8%af%ad/\" title=\"【查看含有[英语]标签的文章】\" class=\"atags color-5\" target=\"_blank\">英语</a>老烂了，但为了解决无聊，就翻了几下。</p><p class=\"is-style-text-indent-2em\">忽然旁边坐过来一年轻小哥哥，瘦瘦的。看我拿本<a href=\"https://www.nange.cn/tag/%e8%8b%b1%e8%af%ad/\" title=\"【查看含有[英语]标签的文章】\" class=\"atags color-5\" target=\"_blank\">英语</a>书在看，就问我，“大学生在昆明读书啊？”，我看了一下他，不像是坏人，而且看起来也不讨厌，就弱弱地回答，“不是，在郑州。”</p>"
       }
-  }
+  }'
   ~~~
 
   
@@ -630,21 +636,106 @@ OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
 #### 修改商品
 
 + desc 
+
 + router
+
+  /shop/v1/api/goods/:goodsId
+
 + method 
+
+  PUT
+
 + request param sample 
+
+  ~~~shell
+  curl --location --request PUT 'http://192.168.2.2:8090/shop/v1/api/goods/66003b20e7010efe0868effa' \
+  --header 'Content-Type: application/json' \
+  --data '{
+      "goodsInfo": {
+          "goodsType": "CAR",
+          "goodsName": "PROSCHE",
+          "goodsPrice": 112000000,
+          "goodsCount": 50,
+          "goodsImgs": [
+              "https://img2.baidu.com/it/u=1275372190,3235868667&fm=253&fmt=auto&app=120&f=JPEG?w=889&h=500"
+          ]
+      },
+      "goodsDetail": {
+          "contentHtml": "<p class=\"is-style-text-indent-2em \">火车还有六个小时才开，无聊就在候车厅呆呆，实在无聊了，就把自己的<a href=\"https://www.nange.cn/tag/%e8%8b%b1%e8%af%ad/\" title=\"【查看含有[英语]标签的文章】\" class=\"atags color-5\" target=\"_blank\">英语</a>词汇书拿出来看了起来，<a href=\"https://www.nange.cn/tag/%e8%8b%b1%e8%af%ad/\" title=\"【查看含有[英语]标签的文章】\" class=\"atags color-5\" target=\"_blank\">英语</a>老烂了，但为了解决无聊，就翻了几下。</p><p class=\"is-style-text-indent-2em\">忽然旁边坐过来一年轻小哥哥，瘦瘦的。看我拿本<a href=\"https://www.nange.cn/tag/%e8%8b%b1%e8%af%ad/\" title=\"【查看含有[英语]标签的文章】\" class=\"atags color-5\" target=\"_blank\">英语</a>书在看，就问我，“大学生在昆明读书啊？”，我看了一下他，不像是坏人，而且看起来也不讨厌，就弱弱地回答，“不是，在郑州。”</p>",
+          "extraData": "{\"title\":\"desc\"}"
+      }
+  }'
+  ~~~
+
+  
+
 + request param table 
+
+  | NAME        | IN   | TYPE          | PARENT | ENUMS       | REQUIRED | DEFAULT | DESC             |
+  | ----------- | ---- | ------------- | ------ | ----------- | -------- | ------- | ---------------- |
+  | goodsInfo   | body | Object        |        |             | true     |         | 商品信息         |
+  | goodsType   |      | String        |        | goodsInfo   | true     |         | 商品类型         |
+  | goodsName   |      | String        |        | goodsInfo   | true     |         | 商品名称         |
+  | goodsPrice  |      | Number        |        | goodsInfo   | true     |         | 商品价格         |
+  | goodsCount  |      | Number        |        | goodsInfo   | true     |         | 商品初始库存量   |
+  | goodsImgs   |      | Array<String> |        | goodsInfo   | true     |         | 商品小图         |
+  | goodsDetail |      | Object        |        |             | true     |         | 商品详情         |
+  | contentHtml |      | String        |        | goodsDetail | true     |         | 商品详情介绍     |
+  | extraData   |      | String        |        | goodsDetail | true     |         | 商品详情额外数据 |
+
 + response sample
+
+  ~~~json
+  {
+      "data": null,
+      "msg": "ok",
+      "success": true,
+      "code": "100000",
+      "timeStamp": 1711293850388,
+      "error": null
+  }
+  ~~~
+
+  
 
 #### 商品列表(包含检索)
 
 + desc
 
+  支持商品名称和类型等模糊查询，后期需要模糊查询的字段也可以添加
+
 + router
+
+  /shop/v1/api/goods
 
 + method
 
+  GET
+
 + request param table 
+
+  | NAME          | IN    | TYPE   | ENUMS                                                        | REQUIRED | DEFAULT    | DESC                                             |
+  | ------------- | ----- | ------ | ------------------------------------------------------------ | -------- | ---------- | ------------------------------------------------ |
+  | orderBy       | query | String | ["goodsPrice","goodsName", "goodsType", "createTime"]        | false    | createTime | 排序字段                                         |
+  | orderSeries   | query | String | ["desc", "asc"]                                              | false    | desc       | 排序方式                                         |
+  | quickSearch   | query | String |                                                              | false    | null       | 快捷模糊查询；检索字段："goodsName", "goodsType" |
+  | goodsType     | query | Number | [  "CAR",   "COMPUTER","FASHION", "HEALTH CARE","FOOD" ,  "SPORT","ELECTRIC",  "BOOK","ENTERTAIN" , "GAME","EDU", "PET",  "INSURANCE", "OTHER" ] | false    | null       | 商品分类                                         |
+  | maxGoodsPrice | query | Number | {gt: 0}                                                      | false    | null       | 商品价格范围                                     |
+  | minGoodsPrice | query | Number | {gt: 0}                                                      | false    | null       | 商品价格范围                                     |
+  | goodsStatus   | query | Number | [1, 2]                                                       | false    | null       | 商品状态                                         |
+  | pageSize      | query | Number | {gt: 0}                                                      | false    | 10         | 分页参数                                         |
+  | pageNo        | query | Number | {gte: 0}                                                     | false    | 0          | 分页参数                                         |
+
+  
+
++ request param sample
+
+  ~~~shell
+  curl --location 'http://192.168.2.2:8090/shop/v1/api/goods?pageNo=0&pageSize=10&goodsStatus=1&goodsType=CAR&minGoodsPrice=10000000&maxGoodsPrice=99999999&orderSeries=desc&orderBy=goodsPrice'
+  
+  ~~~
+
+  
 
 + response param  sample
 
@@ -653,7 +744,35 @@ OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
       "data": {
           "list": [
               {
-                  "_id": "65fb023b4218bcffbd02aa28",
+                  "_id": "66003b20e7010efe0868effa",
+                  "goodsType": "CAR",
+                  "goodsName": "PROSCHE",
+                  "goodsPrice": 111900000,
+                  "goodsCount": 10,
+                  "goodsImgs": [
+                      "https://img2.baidu.com/it/u=1275372190,3235868667&fm=253&fmt=auto&app=120&f=JPEG?w=889&h=500"
+                  ],
+                  "goodsStatus": 1,
+                  "soldCount": 0,
+                  "createTime": 1711291168084,
+                  "__v": 0
+              },
+              {
+                  "_id": "66003ad8e7010efe0868eff5",
+                  "goodsType": "CAR",
+                  "goodsName": "HONDA",
+                  "goodsPrice": 1200000,
+                  "goodsCount": 900,
+                  "goodsImgs": [
+                      "https://n.sinaimg.cn/sinakd20108/600/w1920h1080/20200608/297c-iurnkps0366424.jpg"
+                  ],
+                  "goodsStatus": 1,
+                  "soldCount": 0,
+                  "createTime": 1711291096586,
+                  "__v": 0
+              },
+              {
+                  "_id": "66003a69e7010efe0868eff0",
                   "goodsType": "CAR",
                   "goodsName": "TOYOTA",
                   "goodsPrice": 1000000,
@@ -661,47 +780,127 @@ OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
                   "goodsImgs": [
                       "https://p9-pc-sign.douyinpic.com/tos-cn-i-0813c001/d3a7899bfa5d41dd94e6bbb18f41a1d8~tplv-dy-aweme-images:q75.webp?biz_tag=aweme_images&from=3213915784&s=PackSourceEnum_AWEME_DETAIL&sc=image&se=false&x-expires=1713535200&x-signature=GTZVlxou69h8AWY%2FfLil6WDqlDA%3D"
                   ],
-                  "SoldCount": 0,
-                  "createTime": 1710948923835,
-                  "__v": 0,
-                  "status": 1
+                  "goodsStatus": 1,
+                  "soldCount": 0,
+                  "createTime": 1711290985990,
+                  "__v": 0
               }
           ],
-          "count": 1
+          "count": 3
       },
       "msg": "ok",
       "success": true,
       "code": "100000",
-      "timeStamp": 1711027300006,
+      "timeStamp": 1711291573801,
       "error": null
   }
   ~~~
 
   
 
-+ response param table
-
 #### 根据商品ID获取商品信息
 
 + desc 
+
+  rt
+
 + router
+
+  /shop/v1/api/goods/:goodsId
+
 + method
-+ request param sample
+
+  GET
+
 + request param table 
+
+  | NAME    | IN   | TYPE   | ENUMS | REQUIRED | DEFAULT | DESC   |
+  | ------- | ---- | ------ | ----- | -------- | ------- | ------ |
+  | goodsId | Path | String |       | true     |         | 商品ID |
+
++ request param sample
+
+  ~~~shel
+  curl --location 'http://192.168.2.2:8090/shop/v1/api/goods/66003b20e7010efe0868effa'
+  ~~~
+
+  
+
 + response param sample 
-+ response param table 
+
+  ~~~json
+  {
+      "data": {
+          "_id": "66003b20e7010efe0868effa",
+          "goodsType": "CAR",
+          "goodsName": "PROSCHE",
+          "goodsPrice": 111900000,
+          "goodsCount": 10,
+          "goodsImgs": [
+              "https://img2.baidu.com/it/u=1275372190,3235868667&fm=253&fmt=auto&app=120&f=JPEG?w=889&h=500"
+          ],
+          "goodsStatus": 1,
+          "soldCount": 0,
+          "createTime": 1711291168084,
+          "__v": 0
+      },
+      "msg": "ok",
+      "success": true,
+      "code": "100000",
+      "timeStamp": 1711293078503,
+      "error": null
+  }
+  ~~~
+
 
 #### 根据商品ID获取商品详情
 
 + desc
-+ router
-+ method
-+ request param sample
-+ request param table 
-+ response param sample 
-+ response param table 
 
-####
+  RT
+
++ router
+
+  /shop/v1/api/goods/:orderId/detail
+
++ method
+
+  GET
+
++ request param sample
+
+  ```shell
+  curl --location 'http://192.168.2.2:8090/shop/v1/api/goods/66003b20e7010efe0868effa/detail'
+  ```
+
++ request param table 
+  | NAME    | IN   | TYPE   | ENUMS | REQUIRED | DEFAULT | DESC   |
+  | ------- | ---- | ------ | ----- | -------- | ------- | ------ |
+  | goodsId | Path | String |       | true     |         | 商品ID |
+  
++ response param sample 
+
+  ~~~json
+  {
+      "data": {
+          "_id": "66003b20e7010efe0868effc",
+          "goodsId": "66003b20e7010efe0868effa",
+          "contentHtml": "<p class=\"is-style-text-indent-2em \">火车还有六个小时才开，无聊就在候车厅呆呆，实在无聊了，就把自己的<a href=\"https://www.nange.cn/tag/%e8%8b%b1%e8%af%ad/\" title=\"【查看含有[英语]标签的文章】\" class=\"atags color-5\" target=\"_blank\">英语</a>词汇书拿出来看了起来，<a href=\"https://www.nange.cn/tag/%e8%8b%b1%e8%af%ad/\" title=\"【查看含有[英语]标签的文章】\" class=\"atags color-5\" target=\"_blank\">英语</a>老烂了，但为了解决无聊，就翻了几下。</p><p class=\"is-style-text-indent-2em\">忽然旁边坐过来一年轻小哥哥，瘦瘦的。看我拿本<a href=\"https://www.nange.cn/tag/%e8%8b%b1%e8%af%ad/\" title=\"【查看含有[英语]标签的文章】\" class=\"atags color-5\" target=\"_blank\">英语</a>书在看，就问我，“大学生在昆明读书啊？”，我看了一下他，不像是坏人，而且看起来也不讨厌，就弱弱地回答，“不是，在郑州。”</p>",
+          "extraData": {},
+          "createTime": 1711291168087,
+          "__v": 0
+      },
+      "msg": "ok",
+      "success": true,
+      "code": "100000",
+      "timeStamp": 1711293387140,
+      "error": null
+  }
+  ~~~
+
+  
+
++ response param table 
 
 
 

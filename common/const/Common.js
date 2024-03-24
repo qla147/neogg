@@ -16,8 +16,6 @@ const constants = {
         "OTHER"
     ]
 
-
-
 }
 
 module.exports = constants

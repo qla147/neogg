@@ -1,7 +1,13 @@
 const fs = require("fs")
 const crypto = require("crypto")
 const utils = require("./utils")
+const {Debug} = require("ioredis/built/utils");
+const config =  global._config
 const cryptoUtils = {}
+
+const passwordAlgorithm = "aes-256-cbc"
+
+
 
 
 /**
@@ -37,6 +43,27 @@ cryptoUtils.getStringMd5ByStream= (str)=>{
     const hash = crypto.createHash("md5")
     hash.update(str, "utf-8")
     return hash.digest("hex")
+}
+
+
+/**
+ * @description 加密密码
+ * @param password {type: String} 待加密的密码
+ * @return {Promise<unknown>}
+ * @constructor
+ */
+cryptoUtils.EncodePassword = (password)=>{
+    return new Promise(resolve => {
+        let iv = crypto.randomBytes(16)
+        let cipher = crypto.createCipheriv(passwordAlgorithm, Buffer.from(config.passwordCode, "base64"), iv )
+
+        const input = Buffer.from(password , "utf-8")
+        const encryptedChunks = []
+        encryptedChunks.push(cipher.update(input))
+        encryptedChunks.push(cipher.final())
+        const encryptedData = Buffer.concat(encryptedChunks);
+        return utils.Success(encryptedData.toString("base64"))
+    })
 }
 
 

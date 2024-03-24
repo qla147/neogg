@@ -7,66 +7,216 @@ const {
 } = require("../../models/redis/GoodsInfo")
 const ErrorCode = require("../../common/const/ErrorCode")
 const {GoodsInfo} = require("../../models/mongo/GoodsInfo");
+const {OrderInfoRedisLock} = require("../../models/redis/OrderInfo")
+const {UserInfoRedisModel} = require("../../models/redis/UserInfo")
+const {UserInfoMongoModel} = require("../../models/mongo/UserInfo")
 const mongoose = require("../../common/db/mongo");
-const {UNITS_TO_MS} = require("amqplib/lib/heartbeat");
+const {DEFAULT_OPTIONS} = require("consul/lib/constants");
+
 const service = {}
 
+/**
+ * @description 用户支付订单
+ * @param userInfo {type: Object} 用户信息
+ * @param orderId {type: String } 订单ID
+ * @param payMethod {type: Number} 支付方式
+ * @return {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
+ */
+service.payOrder = async (userInfo, orderId, payMethod) => {
+    let session;
+    // 订单锁定状态
+    let orderFlag = false
+    // 用户锁定状态
+    let userWalletFlag = false
+
+    try {
+
+        let userId = userInfo._id
+
+        session = await mongoose.startSession()
+        await session.startTransaction()
+
+        // 拿到订单信息
+        let orderInfo = OrderInfoMongoModel.findOne({_id: orderId, userId}, null, {session})
+        if (!orderInfo) {
+            return utils.Error(null, ErrorCode.ORDER_INFO_NOT_FOUND)
+        }
+
+        // 判断订单状态
+        switch (orderInfo.orderStatus) {
+            case 0 :
+                //待支付
+                break;
+            case 1 :
+                //取消
+                return utils.Error(null, ErrorCode.ORDER_STATUS_CANCELED)
+            case 2:
+                //失效
+                return utils.Error(null, ErrorCode.ORDER_STATUS_INVALIDATION)
+            case 3:
+                //支付成功
+                return utils.Error(null, ErrorCode.ORDER_STATUS_PAYED)
+                //
+            case 4:
+                //退货退款
+                return utils.Error(null, ErrorCode.ORDER_STATUS_REFUND)
+            case 5:
+                //完成
+                return utils.Error(null, ErrorCode.ORDER_STATUS_COMPLETED)
+            default:
+                // 未知状态
+                return utils.Error(null, ErrorCode.ORDER_STATUS_NOT_KNOWN)
+
+        }
 
 
-service.cancelOrder = async(userInfo , orderId) =>{
+        // 锁定订单
+        let lockRs = await OrderInfoRedisLock.lock(orderId)
+        if (!lockRs.success) {
+            return lockRs
+        }
+
+        if (lockRs.data > 0) {
+            orderFlag = true
+        } else {
+            // 订单已经被锁定，请稍后再试
+            return utils.Error(null, ErrorCode.ORDER_PAY_LOCKED)
+        }
+
+        // 锁定用户
+        lockRs = await UserInfoRedisModel.lock(userId)
+        if (!lockRs.success) {
+            return lockRs
+        }
+
+        // 根据支付方式走不通的逻辑
+        switch (payMethod) {
+            case 1:
+                // 用户数字钱包支付
+                if (lockRs.data > 0) {
+                    userWalletFlag = true
+                } else {
+                    return utils.Error(null, ErrorCode.ORDER_PAY_USER_WALLET_LOCKED)
+                }
+
+                userInfo = await UserInfoMongoModel.findOne({_id: userId}, {}, {session})
+
+                if (userInfo.userWallet < orderInfo.totalPrice) {
+                    return utils.Error(null, ErrorCode.ORDER_PAY_USER_WALLET_BALANCE_INSUFFICIENT)
+                }
+
+                await UserInfoMongoModel.updateOne({_id: userInfo}, {$set: {$inc: -orderInfo.totalPrice}}, {session})
+
+
+                break;
+
+            case 2 :
+            // 信用卡
+            case 3 :
+            // bitcoin
+            case 4 :
+                //wechat
+                break;
+
+        }
+
+        // 状态变更
+        await OrderInfoMongoModel.updateOne({_id: orderId}, {
+            $set: {
+                payMethod,
+                payTime: Date.now(),
+                orderStatus: 3
+            }
+        }, {upsert: false, session})
+
+        await session.commitTransaction()
+
+        return utils.Success()
+
+    } catch (e) {
+        console.error(e)
+        if (session) {
+            await session.abortTransaction()
+        }
+        return utils.Error(e)
+    } finally {
+        if (session) {
+            await session.endSession()
+        }
+        if (orderFlag) {
+           let rs =  await OrderInfoRedisLock.unlock(orderId)
+            if(!rs.success){
+                console.error(`释放订单锁失败 userId:${userInfo._id}, orderId:${orderId}, error:${JSON.stringify(rs)}`)
+            }
+        }
+
+        if (userWalletFlag) {
+            let rs = await UserInfoRedisModel.unlock(userInfo._id)
+            if(!rs.success){
+                console.error(`释放用户锁失败 userId:${userInfo._id}, orderId:${orderId}, error:${JSON.stringify(rs)}`)
+            }
+        }
+    }
+}
+
+
+/**
+ * @description 用户取消订单
+ * @param userInfo {type: Object} 用户信息
+ * @param orderId {type: String } 订单ID
+ * @return {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}|*|{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
+ */
+service.cancelOrder = async (userInfo, orderId) => {
     let session
     let flag = false
     let backGoodsRecord = {}
 
-    try{
-        const  userId = userInfo._id
+    try {
+        const userId = userInfo._id
         let orderInfo = await OrderInfoMongoModel.findOne({_id: orderId, userId})
-        if(!orderInfo){
-            return utils.Error(null , ErrorCode.ORDER_INFO_NOT_FOUND)
+        if (!orderInfo) {
+            return utils.Error(null, ErrorCode.ORDER_INFO_NOT_FOUND)
         }
 
         const {orderStatus} = userInfo
 
-       switch (orderStatus){
-           case 0 :
-           // 待支付
-               break
-           case 1 :
-               //已经取消
-               return utils.Success()
-           case 2:
-               // 已经失效
-               return utils.Error(null , ErrorCode.ORDER_STATUS_INVALIDATION)
-           case 3:
-               // 支付成功
-               return utils.Error(null , ErrorCode.ORDER_STATUS_PAYED)
-           case 4:
-               // 已经退货退款
-               return utils.Error(null , ErrorCode.ORDER_STATUS_REFUND)
-           case 5:
-               // 完成
-               return utils.Error(null , ErrorCode.ORDER_STATUS_COMPLETED)
-           default:
-               return utils.Error(null , ErrorCode.ORDER_STATUS_NOT_KNOWN)
+        switch (orderStatus) {
+            case 0 :
+                // 待支付
+                break
+            case 1 :
+                //已经取消
+                return utils.Success()
+            case 2:
+                // 已经失效
+                return utils.Error(null, ErrorCode.ORDER_STATUS_INVALIDATION)
+            case 3:
+                // 支付成功
+                return utils.Error(null, ErrorCode.ORDER_STATUS_PAYED)
+            case 4:
+                // 已经退货退款
+                return utils.Error(null, ErrorCode.ORDER_STATUS_REFUND)
+            case 5:
+                // 完成
+                return utils.Error(null, ErrorCode.ORDER_STATUS_COMPLETED)
+            default:
+                return utils.Error(null, ErrorCode.ORDER_STATUS_NOT_KNOWN)
 
-       }
+        }
 
         session = await mongoose.startSession()
 
         await session.startTransaction()
 
 
-
-
-
         // 商品回库
         let {orderGoodsInfo} = orderInfo
-        let rs  ;
-        for(const x in orderGoodsInfo){
-            const {goodsId , goodsCount} = orderGoodsInfo[x]
+        let rs;
+        for (const x in orderGoodsInfo) {
+            const {goodsId, goodsCount} = orderGoodsInfo[x]
 
-            rs = await goodsBackToStock(goodsId, goodsCount , session)
-            if(!rs.success){
+            rs = await goodsBackToStock(goodsId, goodsCount, session)
+            if (!rs.success) {
                 flag = true
                 await session.abortTransaction()
                 return rs
@@ -76,28 +226,28 @@ service.cancelOrder = async(userInfo , orderId) =>{
         }
 
 
-        await OrderInfoMongoModel.updateOne({_id: orderId} , {$set:{orderStatus:1}}, {session})
+        await OrderInfoMongoModel.updateOne({_id: orderId}, {$set: {orderStatus: 1}}, {session})
 
         await session.commitTransaction()
 
         return utils.Success()
 
-    }catch (e) {
+    } catch (e) {
         console.error(e)
         flag = true
-        if(session){
+        if (session) {
             await session.abortTransaction()
         }
         return utils.Error(e)
-    }finally {
-        if(session){
+    } finally {
+        if (session) {
             await session.endSession()
         }
 
-        if(flag){
-            for(const goodsId in backGoodsRecord){
+        if (flag) {
+            for (const goodsId in backGoodsRecord) {
                 let rs = await GoodsNumRedisModel.subMore(goodsId, backGoodsRecord[goodsId])
-                if(!rs.success){
+                if (!rs.success) {
                     console.log("取消订单回滚失败：", JSON.stringify(rs))
                     console.error(rs)
                 }
@@ -109,7 +259,6 @@ service.cancelOrder = async(userInfo , orderId) =>{
 }
 
 
-
 /**
  * @description 删除订单 （换个地方存储）
  * @param userInfo {type: Object} 用心西
@@ -117,8 +266,8 @@ service.cancelOrder = async(userInfo , orderId) =>{
  * @return {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}|*>}
  */
 service.deleteOne = async (userInfo, orderId) => {
-    let session ;
-    let flag ;// 用来标记回库是否成功
+    let session;
+    let flag;// 用来标记回库是否成功
     let backGoodsStockRecord = {}
 
     try {
@@ -129,9 +278,9 @@ service.deleteOne = async (userInfo, orderId) => {
 
         await session.startTransaction()
         // 获取订单信息 同时也删除
-        let orderInfo = await OrderInfoMongoModel.findOneAndDelete({_id: orderId, userId}, null , {session})
+        let orderInfo = await OrderInfoMongoModel.findOneAndDelete({_id: orderId, userId}, null, {session})
         if (!orderInfo) {
-            return  utils.Success()
+            return utils.Success()
         }
 
         let rs;
@@ -144,7 +293,7 @@ service.deleteOne = async (userInfo, orderId) => {
                 for (const x in orderGoodsInfo) {
                     const {goodsId, goodsCount} = orderGoodsInfo[x]
                     let backRs = await goodsBackToStock(goodsId, goodsCount, session)
-                    if (!backRs.success){
+                    if (!backRs.success) {
                         //回库失败
                         flag = true
                         return backRs
@@ -172,7 +321,7 @@ service.deleteOne = async (userInfo, orderId) => {
                 break;
         }
 
-        await OrderInfoBackUpMongoModel.insertOne(orderInfo , {session})
+        await OrderInfoBackUpMongoModel.insertOne(orderInfo, {session})
 
         await session.commitTransaction()
 
@@ -180,21 +329,21 @@ service.deleteOne = async (userInfo, orderId) => {
 
     } catch (e) {
         console.error(e)
-        if(session){
+        if (session) {
             flag = true
             await session.abortTransaction()
         }
         return utils.Error(e)
-    }finally {
+    } finally {
 
-        if(session){
+        if (session) {
             await session.endSession()
         }
 
-        if (flag){
-            for(const goodsId in backGoodsStockRecord){
+        if (flag) {
+            for (const goodsId in backGoodsStockRecord) {
                 let rs = await GoodsNumRedisModel.subMore(goodsId, backGoodsStockRecord[goodsId])
-                if(!rs.success){
+                if (!rs.success) {
                     console.log("删除订单回滚失败：", JSON.stringify(rs))
                     console.error(rs)
                 }
@@ -247,7 +396,7 @@ const goodsBackToStock = async function (goodsId, goodsCount, session) {
         }
 
         // 更新mongodb主库
-        let options = {upsert: false }
+        let options = {upsert: false}
         if (session) {
             options.session = session
         }
@@ -263,7 +412,12 @@ const goodsBackToStock = async function (goodsId, goodsCount, session) {
     }
 }
 
-
+/**
+ * @description 新增订单
+ * @param userInfo
+ * @param goodsInfos
+ * @return {Promise<*|{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{success}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
+ */
 service.addOrder = async (userInfo, goodsInfos) => {
     let session;
     // 记录出库记录
@@ -317,32 +471,32 @@ service.addOrder = async (userInfo, goodsInfos) => {
             }
 
             // 没有库存
-            if(goodsInfo.goodsStatus === 2 ){
-                return utils.Error(null , ErrorCode.GOODS_OUT_OF_STOCK)
+            if (goodsInfo.goodsStatus === 2) {
+                return utils.Error(null, ErrorCode.GOODS_OUT_OF_STOCK)
             }
 
-            let  stockNumRs = await GoodsNumRedisModel.getCount(goodsId)
+            let stockNumRs = await GoodsNumRedisModel.getCount(goodsId)
 
-            if(!stockNumRs.success){
+            if (!stockNumRs.success) {
                 return stockNumRs
             }
             // 没有库存
-            if(stockNumRs.data <= 0 ){
+            if (stockNumRs.data <= 0) {
                 let updateInfo = {
-                    goodsStatus : 2 ,
-                    soldCount  : goodsInfo.goodsCount
+                    goodsStatus: 2,
+                    soldCount: goodsInfo.goodsCount
                 }
 
-                await GoodsInfo.updateOne({_id: goodsId},{$set: updateInfo} , {upsert: false , session} )
-                let rs = await GoodsInfoRedisModel.updateField(goodsId,updateInfo)
-                if (rs.success){
+                await GoodsInfo.updateOne({_id: goodsId}, {$set: updateInfo}, {upsert: false, session})
+                let rs = await GoodsInfoRedisModel.updateField(goodsId, updateInfo)
+                if (rs.success) {
                     await session.abortTransaction()
                     return rs
                 }
 
                 await session.commitTransaction()
 
-                return utils.Error(null , ErrorCode.GOODS_OUT_OF_STOCK)
+                return utils.Error(null, ErrorCode.GOODS_OUT_OF_STOCK)
             }
 
             detailGoodsInfo[goodsId] = goodsInfo
@@ -361,7 +515,7 @@ service.addOrder = async (userInfo, goodsInfos) => {
                 return checkOutRs
             }
 
-            if(!checkOutRs.data){
+            if (!checkOutRs.data) {
                 // 没有库存
                 await G
 
@@ -447,15 +601,15 @@ service.addOrder = async (userInfo, goodsInfos) => {
             // 根据出库记录入库
             let tasks = []
             for (const goodsId in outStockRecord) {
-                tasks.push(goodsBackToStock(goodsId, outStockRecord[goodsId], undefined) )
+                tasks.push(goodsBackToStock(goodsId, outStockRecord[goodsId], undefined))
             }
             if (tasks.length > 0) {
                 let rs = await Promise.allSettled(tasks)
                 for (const x in rs) {
                     if (rs[x].status !== "fulfilled") {
                         console.error(rs[x].reason)
-                    }else{
-                        if(!rs[x].value.success){
+                    } else {
+                        if (!rs[x].value.success) {
                             console.error("回滚库存失败 msg :", JSON.stringify(rs[x].value))
                         }
                     }

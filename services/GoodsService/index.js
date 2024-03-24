@@ -50,6 +50,7 @@ service.updateGoods = async (goodsId , param )=>{
 
 
         session = await  mongoose.startSession()
+        await session.startTransaction()
 
         let  {goodsInfo , goodsDetail } = param
 
@@ -180,20 +181,20 @@ service.addGoods = async (params)=>{
         }
 
         goodsInfo.createTime = Date.now()
-        goodsInfo.goodsStatus = goodsCount > 0 ? 1 : 2 ;
+        goodsInfo.goodsStatus = goodsInfo.goodsCount > 0 ? 1 : 2 ;
 
-        // 入库商品信息
+        // 入库商品信息 mongodb
         let goodsInfoModel  = new GoodsInfo(goodsInfo)
-        goodsInfo = await goodsInfoModel.save({session})
+        await goodsInfoModel.save({session})
 
-        goodsDetail.goodsId = goodsInfo._id
+        goodsDetail.goodsId = goodsInfoModel._id
         goodsDetail.createTime = Date.now()
 
-        //入库商品详情
+        //入库商品详情 mongodb
         let goodsDetailModel = new GoodsDetail(goodsDetail)
         await goodsDetailModel.save({session})
         // 入库redis
-        let rs  = await GoodsNumRedisModel.initGoods(goodsInfo._id.toString(), goodsInfo.goodsCount)
+        let rs  = await GoodsNumRedisModel.initGoods(goodsInfoModel._id.toString(), goodsInfoModel.goodsCount)
         if(!rs.success){
             // 回滚mongodb
             await session.abortTransaction()
@@ -201,7 +202,7 @@ service.addGoods = async (params)=>{
         }
 
         // 入库es
-        const {goodsType,goodsName, _id , goodsPrice} = goodsInfo
+        const {goodsType,goodsName, _id , goodsPrice} = goodsInfoModel
         let goodsInfoEs = { goodsType, goodsName, id:_id.toString(),goodsPrice}
 
         rs = await GoodsInfoEsModel.insert(goodsInfoEs)
@@ -214,7 +215,7 @@ service.addGoods = async (params)=>{
         }
 
         // 写入缓存
-        await GoodsInfoRedisModel.insert(goodsInfo._id.toString(),goodsInfo)
+        await GoodsInfoRedisModel.insert(goodsInfoModel._id.toString(),goodsInfoModel.toObject())
 
         await session.commitTransaction()
 
@@ -280,6 +281,7 @@ service.search  = async (searchParam)=>{
             }
         }
 
+        // 组装检索条件
         if (goodsType){
             search.goodsType = goodsType
         }
@@ -289,7 +291,11 @@ service.search  = async (searchParam)=>{
         }
 
         if (maxGoodsPrice !== undefined){
-            search.goodsPrice = {$lte: maxGoodsPrice}
+            if(search.goodsPrice){
+                search.goodsPrice["$lte"] = maxGoodsPrice
+            }else{
+                search.goodsPrice = {$lte: maxGoodsPrice}
+            }
         }
 
 
@@ -306,12 +312,8 @@ service.search  = async (searchParam)=>{
 
         // 检索数据库
         let list = await GoodsInfo.find(search).sort(sort).skip(pageNo * pageSize ).limit(pageSize).lean();
-        let count ;
-        if(list.length <= pageSize &&  pageNo === 0){
-            count = list.length
-        }else{
-            count = await GoodsInfo.countDocuments(search)
-        }
+        let count  = await GoodsInfo.countDocuments(search)
+
         return utils.Success({list, count})
     }catch (err) {
         console.error(err)

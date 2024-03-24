@@ -15,9 +15,15 @@ const Code =  {
     "ORDER_STATUS_NOT_KNOWN": "401",// 订单状态未知
     "ORDER_STATUS_CANCELED" :"402", // 订单已经取消
     "ORDER_STATUS_REFUND" :"403", // 订单已经退货退款
-    "ORDER_STATUS_PAYED" :"404" , // 订单已经支付，如需要取消请走退款通道
+    "ORDER_STATUS_PAYED" :"404" , // 订单已经被支付
     "ORDER_STATUS_COMPLETED":"405", // 订单已经完成，请走退货退款流程
     "ORDER_STATUS_INVALIDATION":"406", // 订单已经失效
+    "ORDER_PAY_METHOD_ONLY_SUPPORT_DIGITAL_WALLET" :"407" ,// 目前仅仅支持用户钱包支付
+    "ORDER_PAY_LOCKED" : "408", // 订单被锁定，请稍后再试
+    "ORDER_PAY_USER_WALLET_LOCKED" : "409", // 用户钱包被锁定，请稍后再试
+    "ORDER_PAY_USER_WALLET_BALANCE_INSUFFICIENT" : "410", // 用户钱包余额不足
+
+
 
 
     "INTERNAL_ERROR": "500", // 内部错误
