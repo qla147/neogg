@@ -902,6 +902,197 @@ OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
 
 + response param table 
 
+  ~~~JSON
+  
+  {
+      "data": {
+          "_id": "66003b20e7010efe0868effc",
+          "goodsId": "66003b20e7010efe0868effa",
+          "contentHtml": "<p class=\"is-style-text-indent-2em \">火车还有六个小时才开，无聊就在候车厅呆呆，实在无聊了，就把自己的<a href=\"https://www.nange.cn/tag/%e8%8b%b1%e8%af%ad/\" title=\"【查看含有[英语]标签的文章】\" class=\"atags color-5\" target=\"_blank\">英语</a>词汇书拿出来看了起来，<a href=\"https://www.nange.cn/tag/%e8%8b%b1%e8%af%ad/\" title=\"【查看含有[英语]标签的文章】\" class=\"atags color-5\" target=\"_blank\">英语</a>老烂了，但为了解决无聊，就翻了几下。</p><p class=\"is-style-text-indent-2em\">忽然旁边坐过来一年轻小哥哥，瘦瘦的。看我拿本<a href=\"https://www.nange.cn/tag/%e8%8b%b1%e8%af%ad/\" title=\"【查看含有[英语]标签的文章】\" class=\"atags color-5\" target=\"_blank\">英语</a>书在看，就问我，“大学生在昆明读书啊？”，我看了一下他，不像是坏人，而且看起来也不讨厌，就弱弱地回答，“不是，在郑州。”</p>",
+          "extraData": {},
+          "createTime": 1711291168087,
+          "__v": 0
+      },
+      "msg": "ok",
+      "success": true,
+      "code": "100000",
+      "timeStamp": 1711293387140,
+      "error": null
+  }
+  ~~~
+
+  
+
+### 购物车相关接口
+
+#### 用户购物车列表检索
+
++ router
+
+  /shop/v1/api/cart
+
++ method
+
+  GET
+
++ request param sample
+
+  ~~~shell
+  curl --location 'http://192.168.2.2:8090/shop/v1/api/cart?pageNo=0&pageSize=10&goodsName=HONDA'
+  ~~~
+
+  
+
++ request param table 
+
+  | NAME      | IN    | TYPE   | PARENT | ENUMS | REQUIRED | DEFAULT | DESC     |
+  | --------- | ----- | ------ | ------ | ----- | -------- | ------- | -------- |
+  | goodsName | query | String | null   |       | false    |         | 商品名称 |
+  | pageNo    | query | Number | null   |       | false    | 0       | 分页参数 |
+  | pageSize  | query | Number | null   |       | false    | 10      | 分页参数 |
+  |           |       |        |        |       |          |         |          |
+
++ response param sample
+
+  ~~~json
+  {
+      "data": {
+          "list": [
+              {
+                  "createTime": 1711291096586,
+                  "soldCount": "0",
+                  "goodsCount": 2,
+                  "goodsImgs": "https://n.sinaimg.cn/sinakd20108/600/w1920h1080/20200608/297c-iurnkps0366424.jpg",
+                  "goodsName": "HONDA",
+                  "goodsPrice": "1200000",
+                  "_id": "66003ad8e7010efe0868eff5",
+                  "goodsType": "CAR",
+                  "goodsStatus": "1",
+                  "__v": 0,
+                  "goodsId": "66003ad8e7010efe0868eff5",
+                  "userId": "660036a6c8f9e09dff0bf1f6"
+              }
+          ],
+          "count": 1
+      },
+      "msg": "ok",
+      "success": true,
+      "code": "100000",
+      "timeStamp": 1711326829666,
+      "error": null
+  }
+  ~~~
+
+  
+
+#### 添加商品到购物车
+
++ router
+
+  /shop/v1/api/cart
+
++ method
+
+  POST
+
++ request param sample
+
+  ~~~shell
+  curl --location 'http://192.168.2.2:8090/shop/v1/api/cart' \
+  --header 'Content-Type: application/json' \
+  --data '{
+      "goodsId": "66003ad8e7010efe0868eff5",
+      "goodsCount": 1
+  }'
+  ~~~
+
++ request param table
+
+  | NAME       | IN   | TYPE   | ENUMS | REQUIRED | DEFAULT | DESC     |
+  | ---------- | ---- | ------ | ----- | -------- | ------- | -------- |
+  | goodsId    | body | String |       | true     |         | 商品ID   |
+  | goodsCount | body | String |       | true     |         | 商品数量 |
+
++ response param sample 
+
+  ~~~json
+  {
+      "data": {
+          "_id": "66003ad8e7010efe0868eff5",
+          "goodsId": "66003ad8e7010efe0868eff5",
+          "goodsName": "HONDA",
+          "goodsCount": 2,
+          "userId": "660036a6c8f9e09dff0bf1f6",
+          "createTime": 1711291096586,
+          "__v": 0
+      },
+      "msg": "ok",
+      "success": true,
+      "code": "100000",
+      "timeStamp": 1711325179676,
+      "error": null
+  }
+  ~~~
+
+  
+
+#### 修改商品购物车
+
++ desc
+
+  如果在body中传递空数组，则是清空购物车，删除所有的商品，后台检测body的类型，必须得是Array类型
+
++ router
+
+  /shop/v1/api/cart
+
++ method
+
+  PUT
+
++ request param sample
+
+  ~~~SHELL
+  curl --location --request PUT 'http://192.168.2.2:8090/shop/v1/api/cart?pageNo=0&pageSize=10&goodsStatus=2&goodsName=HONDA&orderSeries=desc&orderBy=goodsName' \
+  --header 'Content-Type: application/json' \
+  --data '[
+      {
+          "goodsCount": 3,
+          "_id": "66003ad8e7010efe0868eff5",
+          "goodsId": "66003ad8e7010efe0868eff5",
+          "userId": "660036a6c8f9e09dff0bf1f6"
+      }
+  ]'
+  ~~~
+
+  
+
++ request param table 
+
+  | NAME       | IN          | TYPE   | PARENT | ENUMS | REQUIRED | DEFAULT | DESC     |
+  | ---------- | ----------- | ------ | ------ | ----- | -------- | ------- | -------- |
+  | goodsId    | Body<Array> | String |        |       | true     |         | 商品ID   |
+  | _id        | Body<Array> | String |        |       | true     |         | 购物车id |
+  | goodsCount | Body<Array> | Number |        |       | true     |         | 商品数量 |
+
++ response param sample
+
+  ~~~json
+  {
+      "msg": "ok",
+      "success": true,
+      "code": "100000",
+      "timeStamp": 1711328568295,
+      "error": null
+  }
+  ~~~
+
+  
+
+#### 购物车商品生成订单
+
++ 
+
 
 
 ## 运维部分

@@ -218,6 +218,12 @@ const GoodsNumRedisModel = {
 
 const  GoodsInfoRedisModel  = {
     // insert
+    /**
+     * @description 写入商品信息到缓存
+     * @param goodsId
+     * @param goodsInfo
+     * @return {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
+     */
     insert :async (goodsId , goodsInfo)=> {
         try{
             let key = `goodsInfo:${goodsId}`
@@ -228,6 +234,11 @@ const  GoodsInfoRedisModel  = {
             return utils.Error(e , ErrorCode.REDIS_ERROR)
         }
     },
+    /**
+     * @description 获取指定商品的所有field
+     * @param goodsId {type: String} 商品ID
+     * @return {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
+     */
     get: async (goodsId)=>{
         try{
             let key = `goodsInfo:${goodsId}`
@@ -238,6 +249,29 @@ const  GoodsInfoRedisModel  = {
             return utils.Error(e, ErrorCode.REDIS_ERROR)
         }
     },
+    /**
+     * @desc 获取商品信息的fields
+     * @param goodsId {type: string }  商品信息ID
+     * @param field {type : string } 商品信息field
+     * @return {Promise<{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
+     */
+    getField:async(goodsId, field) =>{
+        try{
+            let key = `goodsInfo:${goodsId}`
+            let rs  = await redisClient.hget(key, field)
+            return utils.Success(rs)
+
+        }catch (e) {
+            console.error(e)
+            return utils.Error(e, ErrorCode.REDIS_ERROR)
+        }
+    },
+    /**
+     * @description 更新商品的fields
+     * @param goodsId  {type: String} 商品ID
+     * @param keyValueMap {type: Object}
+     * @return {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
+     */
     updateField :async (goodsId , keyValueMap )=>{
         try{
             let key = `goodsInfo:${goodsId}`

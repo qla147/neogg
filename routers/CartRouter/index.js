@@ -12,24 +12,14 @@ const router = express.Router()
  */
 router.get("/" , async (req, res )=>{
     let userInfo = req.userInfo
-
     //------------------------------------------------------------------------------------------------------------
-    let   {goodsName , goodsType , goodsStatus , orderBy = "createTime" , orderSeries = "desc", pageSize , pageNo } = req.query
+    let   {goodsName  , orderBy = "createTime" , orderSeries = "desc", pageSize , pageNo } = req.query
     if (!!orderBy && !["goodsName", "createTime"].includes(orderBy)){
         return res.json(utils.Error(null , ErrorCode.PARAM_ERROR, "orderBy"))
     }
 
     if (!!orderSeries && !["desc", "asc"].includes(orderSeries)){
         return res.json(utils.Error(null , ErrorCode.PARAM_ERROR, "orderSeries"))
-    }
-
-
-    if (!!goodsType && Constant.GOODS_TYPE.includes(goodsType)){
-        return res.json(utils.Error(null , ErrorCode.PARAM_ERROR, "goodsType"))
-    }
-
-    if (!!goodsStatus && !([1, 2].includes(goodsStatus) || ["1" , "2"].includes(goodsStatus) )){
-        return res.json(utils.Error(null , ErrorCode.PARAM_ERROR, "goodsStatus"))
     }
 
 
@@ -58,7 +48,7 @@ router.get("/" , async (req, res )=>{
         pageNo = 0
     }
 
-    let searchParam  = {orderBy , orderSeries , goodsType , goodsName , goodsStatus , pageSize  , pageNo }
+    let searchParam  = {orderBy , orderSeries , goodsName  , pageSize  , pageNo }
 
     let rs = await CartService.search(userInfo , searchParam)
 
@@ -70,27 +60,26 @@ router.get("/" , async (req, res )=>{
  */
 router.post("/" , async(req , res)=>{
     let userInfo = req.userInfo
-    let  { goodsId , goodsNum } = req.body
+    let  { goodsId , goodsCount } = req.body
+    // ------------------------------------------------------------参数检测-----------------------------------------------
     if (!mongoose.isValidObjectId(goodsId) ){
-        return res.json(utils.Error(null , ErrorCode.PARAM_ERROR, "goodsId"))
+        return res.json(utils.Error(mongoose.isValidObjectId(goodsId) , ErrorCode.PARAM_ERROR, "goodsId"))
     }
 
-    if(!goodsNum ||  isNaN(goodsNum)){
-        return res.json(utils.Error(null , ErrorCode.PARAM_ERROR, "goodsNum"))
+    if(!goodsCount ||  isNaN(goodsCount)){
+        return res.json(utils.Error(null , ErrorCode.PARAM_ERROR, "goodsCount"))
     }
 
-    if (typeof goodsNum === "string"){
-        goodsNum = parseInt(goodsNum)
+    if (typeof goodsCount === "string"){
+        goodsCount = parseInt(goodsCount)
     }
 
-    if(goodsNum <= 0  ){
-        return res.json(utils.Error(null , ErrorCode.PARAM_ERROR , "goodsNum"))
+    if(goodsCount <= 0  ){
+        return res.json(utils.Error(null , ErrorCode.PARAM_ERROR , "goodsCount"))
     }
 
-    let rs = await CartService.addGoodsIntoCart(userInfo, goodsId, goodsNum )
+    let rs = await CartService.addGoodsIntoCart(userInfo, goodsId, goodsCount )
     return res.json(rs)
-
-
 })
 
 
@@ -164,7 +153,7 @@ router.put("/" , async(req, res)=>{
         return res.json(utils.Error(null , ErrorCode.PARAM_ERROR , "cartInfos"))
     }
     for(const x in cartInfos){
-        let  {_id , goodsId , count } = cartInfos[x]
+        let  {_id , goodsId , goodsCount } = cartInfos[x]
         if (!mongoose.isValidObjectId(goodsId)){
             return res.json(utils.Error(null , ErrorCode.PARAM_ERROR , "goodsId"))
         }
@@ -173,16 +162,16 @@ router.put("/" , async(req, res)=>{
             return res.json(utils.Error(null , ErrorCode.PARAM_ERROR , "cartId"))
         }
 
-        if(count === undefined || isNaN(count)){
-            return res.json(utils.Error(null , ErrorCode.PARAM_ERROR , "count"))
+        if(goodsCount === undefined || isNaN(goodsCount)){
+            return res.json(utils.Error(null , ErrorCode.PARAM_ERROR , "goodsCount"))
         }
 
-        if(typeof count === "string"){
-            count = parseInt(count)
-            if(count <= 0  || count > 9999) {
-                return res.json(utils.Error(null , ErrorCode.PARAM_ERROR , "count"))
+        if(typeof goodsCount === "string"){
+            goodsCount = parseInt(goodsCount)
+            if(goodsCount <= 0  || goodsCount > 9999) {
+                return res.json(utils.Error(null , ErrorCode.PARAM_ERROR , "goodsCount"))
             }
-            cartInfos[x].count = count
+            cartInfos[x].goodsCount = goodsCount
         }
     }
 

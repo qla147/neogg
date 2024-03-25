@@ -10,7 +10,6 @@ const {timer} = require("./services/TimerService/index")
 
 const  http = require('http');
 const fs = require("fs")
-const mongoose = require("mongoose");
 
 // var server
 

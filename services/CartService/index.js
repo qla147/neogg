@@ -27,10 +27,10 @@ service.updateCart = async(userInfo , cartInfos)=>{
         // 判断需要变更的商品
         for (const x in cartInfos){
             let cartInfo = originalCartList.find((t)=>{
-                return t._id.toString() === cartInfo[x]
+                return t._id.toString() === cartInfos[x]._id
             })
             // 商品数量不相等就是要更新
-            if (cartInfo || cartInfo.count !== cartInfos[x].count ){
+            if ( !cartInfo || cartInfo.goodsCount !== cartInfos[x].goodsCount ){
                 needChangedGoods.push(cartInfos[x])
             }
         }
@@ -46,16 +46,15 @@ service.updateCart = async(userInfo , cartInfos)=>{
             }
         }
 
-
         // 把更新删除任务放入数组使用promise 同时异步执行
         let tasks = []
 
         if (needDeleteGoods.length > 0 ){
-            tasks.push(CartInfoModel.deleteMany({_id:{$in: needDeleteGoods}}))
+            tasks.push(CartInfoModel.deleteMany({_id:{$in: needDeleteGoods} , userId}))
         }
 
         for(const x in needChangedGoods){
-            tasks.push(CartInfoModel.updateOne({_id: needChangedGoods[x]._id},{$set:{count: needChangedGoods[x].count}}))
+            tasks.push(CartInfoModel.updateOne({_id: needChangedGoods[x]._id , userId},{$set:{goodsCount: needChangedGoods[x].goodsCount}}))
         }
 
         if(tasks.length ){
@@ -141,30 +140,44 @@ service.deleteGoodsFromCart = async (userInfo , cartId)=>{
  * @description 添加商品到购物车
  * @param userInfo {type: Object} 用户信息
  * @param goodsId {type: Mongoose.Types.ObjectId} 商品ID
- * @param goodsNum {type: Number} 商品数量
+ * @param goodsCount {type: Number} 商品数量
  */
-service.addGoodsIntoCart = async (userInfo , goodsId , goodsNum ) =>  {
+service.addGoodsIntoCart = async (userInfo , goodsId , goodsCount ) =>  {
     try{
-        let goodsInCart = await CartInfoModel.findOne({userId: userInfo._id , goodsId})
+        let userId = userInfo._id
+        //  查看商品是否存在于购物车
+        let goodsInCart = await CartInfoModel.findOne({userId , goodsId})
         if (goodsInCart){
             // 已经存在购物车 加数量即可
-             let rs = await CartInfoModel.findOneAndUpdate({_id: goodsInCart._id},{$inc:{count: goodsNum}},{upsert:false , new: true})
+             let rs = await CartInfoModel.findOneAndUpdate({_id: goodsInCart._id},{$inc:{goodsCount}},{upsert:false , new: true})
             return utils.Success(rs)
         }else{
             // 不存在就比较麻烦 ，提取数据然后入库
-            let goodsInfo = await GoodsInfoRedisModel.get(goodsId)
+            let goodsInfoRs = await GoodsInfoRedisModel.get(goodsId)
+
+            if(!goodsInfoRs.success){
+                return goodsInfoRs
+            }
+
+            let goodsInfo = goodsInfoRs.data
+
             goodsInCart = {
                 goodsId,
+                userId,
+                goodsCount
             }
 
             if (Object.keys(goodsInfo).length > 0 ){
-                goodsInCart =  Object.assign(goodsInCart,goodsInfo )
+                goodsInCart = {...goodsInfo,...goodsInCart }
+
+
+                // goodsInCart =  Object.assign(goodsInCart,goodsInfo )
             }else {
                 goodsInfo = await GoodsInfo.findOne({_id:goodsId})
                 if (!goodsInfo) {
                     return utils.Error(null , ErrorCode.GOODS_INFO_NOT_FOUND)
                 }
-                goodsInCart = Object.assign(goodsInCart, goodsInfo)
+                goodsInCart =  goodsInCart = {...goodsInfo,...goodsInCart }
             }
 
             goodsInCart = new CartInfoModel(goodsInCart)
@@ -194,9 +207,6 @@ service.search = async  (userInfo , params)=>{
         let ids = []
         let search = {userId : userInfo._id}
 
-        if(goodsStatus){
-            search.goodsStatus  = goodsStatus
-        }
 
         if (goodsName){
             let query = {
@@ -218,10 +228,13 @@ service.search = async  (userInfo , params)=>{
             if(ids.length === 0 ){
                 return utils.Success({list:[],count:0 })
             }else{
-                search.goodIds = {$in: ids}
+                search.goodsId = {$in: ids}
             }
 
         }
+
+
+
 
         let sort = {}
         if (orderSeries === "asc"){
@@ -232,9 +245,9 @@ service.search = async  (userInfo , params)=>{
 
 
         // 检索数据库
-        let list = await  CartInfoModel.find(search ,).sort(sort).skip(pageNo * pageSize ).limit(pageSize).lean();
-        for(let x of list ){
-            let goodsId = x.goodsId
+        let list = await  CartInfoModel.find(search).sort(sort).skip(pageNo * pageSize ).limit(pageSize).lean();
+        for(let x in list ){
+            let goodsId = list[x].goodsId
             let goodsInfoRs  = await GoodsInfoRedisModel.get(goodsId)
             if (!goodsInfoRs.success){
                 return goodsInfoRs
@@ -251,17 +264,10 @@ service.search = async  (userInfo , params)=>{
                 }
             }
 
-            x = {...x, ...goodsInfo}
+            list[x] = { ...goodsInfo,...list[x]}
         }
 
-
-
-        let count ;
-        if(list.length <= pageSize &&  pageNo === 0 ){
-            count = list.length
-        }else{
-            count = await CartInfoModel.countDocuments(search)
-        }
+        let count = await CartInfoModel.countDocuments(search)
 
         return utils.Success({list,count })
 
