@@ -1,9 +1,13 @@
+const  mongoose = require("mongoose");
+
 const config = global._config
-const mongoose = require("mongoose");
 
 
 const mongooseInstance = new mongoose.Mongoose()
-mongooseInstance.connect(config.mongodb.url, {
+
+
+
+mongooseInstance.connect(config.gridfs.url, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 });
@@ -11,12 +15,17 @@ mongooseInstance.connect(config.mongodb.url, {
 const conn = mongooseInstance.connection
 conn.on("error",(err)=>{
     console.error(err)
-    console.error("mongodb got error")
+    console.error("gridfs got error")
+})
+let gridfs;
+conn.on("open", ()=> {
+    console.error("gridfs is ready!")
 })
 
-conn.on("open", ()=>{
-    console.error("mongodb is ready!")
-})
+
+
 
 
 module.exports = mongooseInstance
+
+

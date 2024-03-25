@@ -2,6 +2,10 @@
 const  mongoose = require("../../../common/db/mongo")
 const Schema = mongoose.Schema
 const FileInfoSchema = new Schema({
+    fileName :{
+        type: String ,
+        desc :"文件名称"
+    },
     fileSize :{
         required : true ,
         type : Number ,
@@ -15,7 +19,7 @@ const FileInfoSchema = new Schema({
     fileType :{
       type : String,
       // enum :["video","audio","doc" , "pdf", "xls","xlsx","img"],
-      desc :"文件类型"
+      desc :"文件类型 content-type"
     },
     fileUrl : {
       type : String ,
@@ -31,34 +35,28 @@ const FileInfoSchema = new Schema({
       enum: [1, 2, 0],
       default : 0
     },
-    isShared: {
-        default : false ,
-        type : Boolean ,
-        desc :"共享文件"
+    sliceCount:{
+        type: Number,
+        desc :"该文件的子文件切片的数量"
     },
     userId :{
-        type : mongoose.Types.ObjectId,
+        type : Schema.Types.ObjectId,
         desc :"上传用户ID",
         ref: "userInfo"
     },
-    autoDelete: {
-        type: Number ,
-        desc : "上传没有完成-自动删除时间"
-    },
-    completeTime : {
+    updateTime : {
         type : Number ,
-        desc :"完成上传的时间"
+        desc :"更新时间"
     },
     createTime : {
         type : Number ,
         desc :"创建时间"
     },
     fileId:{
-        type : mongoose.Types.ObjectId,
+        type : Schema.Types.ObjectId,
         ref :"file",
         desc :"文件物理存储表"
     }
-
 },{
     collection :"fileInfo"
 })
@@ -79,6 +77,10 @@ const FileSchema = new Schema({
         type : Boolean ,
         default : false ,
         desc :"是否为共享文件"
+    },
+    createTime : {
+        type : Number ,
+        desc :"创建时间"
     }
 },{
     collection: "file"
@@ -87,5 +89,5 @@ const FileSchema = new Schema({
 
 module.exports ={
     FileModel :mongoose.model("file", FileSchema),
-    FileInfoModel : module.exports = mongoose.model("fileInfo", FileInfoSchema)
+    FileInfoModel :  mongoose.model("fileInfo", FileInfoSchema)
 }

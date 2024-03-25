@@ -1,6 +1,6 @@
 {
-  "serverName": "file_server",
-  "serverNo": "200",
+  "serverName": "shop_server",
+  "serverNo": "100",
   "consul": {
     "host": "192.168.2.4",
     "port": "8500"

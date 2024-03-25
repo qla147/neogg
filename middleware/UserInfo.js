@@ -9,13 +9,19 @@ const middleware = {}
  * @desc  获取请求的用户信息中间件，以及权限都在这里
  */
 middleware.checkUserFromRequest = (req , res , next ) =>{
-    // const {token } = req.headers ;
-    // const userId  = ""
+    // 不做用户权限验证的url, 但是是用户访问也要获取用户信息
+    // let excludes = ["/shop/v1/api/goods", "/file/v2/api/down"]
+
+    // if(!excludes.includes(req.URL)){
+    //
+    // }
     req.userInfo =  {
-        id: "123456",
-        username: "oreo"
+        _id: "660036a6c8f9e09dff0bf1f6",
+        userName: "oreo"
     }
-    next(req, res)
+
+
+    next()
 }
 
 module.exports = middleware

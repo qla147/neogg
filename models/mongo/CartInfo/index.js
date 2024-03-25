@@ -2,30 +2,39 @@ const  mongoose = require("../../../common/db/mongo")
 const Schema = mongoose.Schema
 
 
-const  CartInfo = new Schema({
+const  CartInfoSchema = new Schema({
     goodsId :{
-        type : mongoose.Types.ObjectId,
+        type : Schema.Types.ObjectId,
         desc : "商品ID",
         ref:"goodsInfo"
     },
-    count :{
+    goodsName :{
+        type:String ,
+        desc :"商品名称"
+    },
+    goodsCount :{
         type : Number,
-        min: 0 ,
+        min: 1 ,
         max: 9999,
         desc :"商品数量"
     },
     userId:{
-      type : mongoose.Types.ObjectId,
+      type : Schema.Types.ObjectId,
       desc : "用户ID",
       ref: "userInfo",
       required : true
     },
-    addTime :{
+    createTime :{
         type: Number ,
         desc :"添加时间"
     }
-},{collection:"cartInfo"})
+},)
 
 
-CartInfo.index({goodsId: 1 , userId : 1 })
-CartInfo.index({ userId : 1 , addTime : -1 })
+CartInfoSchema.index({ goodsId: 1 , userId : 1 })
+CartInfoSchema.index({ userId : 1 , addTime : -1 })
+CartInfoSchema.index({ userId : 1})
+
+module.exports = {
+    CartInfoModel: mongoose.model("cart_info", CartInfoSchema, "cart_info")
+}

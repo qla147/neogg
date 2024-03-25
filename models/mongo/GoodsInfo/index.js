@@ -10,51 +10,54 @@ const GoodsBasicInfo = new Schema({
         type : String  ,
         desc : "商品名称"
     },
-    saleTime :{
-        type : Number ,
-        desc : "开售时间, 格式timestamp",
-    },
-    goodsUsdPrice:{
+    // saleTime :{
+    //     type : Number ,
+    //     desc : "开售时间, 格式timestamp",
+    // },
+    goodsPrice:{
         type: Number ,
-        desc :"商品售价,以美分为单位",
+        desc :"商品售价,放大100倍",
         min: 0
     },
     goodsCount : {
         type: Number ,
-        desc :"商品可售数量",
+        desc :"商品原始可售数量",
         min:0 ,
         max:9999
     },
-    status:{
+    goodsImgs :[{
+        type : String,
+        desc : "商品图片"
+    }],
+    goodsStatus:{
         type: Number ,
         desc :{
             detail : "商品状态",
             enums:{
-                0 : "待上架",
-                1 : "上架售卖中",
-                2 : "下架",
-                3 : "售罄"
+
+                1 : "有货",
+                2 : "售罄"
             }
         },
-        enum:[0,1,2,3]
+        enum:[1,2]
     },
-    SoldCount:{
+    soldCount:{
         type: Number,
-        desc:"以后售卖的数量",
+        desc:"售卖的数量",
         default: 0
     },
     createTime : {
         type : Number,
         desc :  "创建时间"
     },
-}, {collection:"goodsInfo"})
+}, {collection:"goods_info"})
 
 GoodsBasicInfo.index({goodsName : 1 ,goodsType : 1 , saleTime : -1 })
 
 
 const GoodsDetail = new Schema({
     goodsId :{
-        type: mongoose.Types.ObjectId,
+        type: Schema.Types.ObjectId,
         desc : "商品ID",
         ref : "goodsInfo",
         index: true ,
@@ -66,8 +69,16 @@ const GoodsDetail = new Schema({
         desc : "详情页面html文本"
     },
     extraData :{
-        type: mongoose.Types.Map,
+        type: Schema.Types.Map,
         desc :"渲染需要的参数"
+    },
+    createTime :{
+        type: Number,
+        desc :"创建时间"
     }
-}, {collection: "goodsDetail"})
+}, {collection: "goods_detail"})
 
+module.exports =  {
+    GoodsInfo : mongoose.model(  "goods_info", GoodsBasicInfo),
+    GoodsDetail : mongoose.model( "goods_detail", GoodsDetail )
+}

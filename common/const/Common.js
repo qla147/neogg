@@ -1,13 +1,21 @@
-const config  = {}
+const constants = {
+    GOODS_TYPE : [
+        "CAR",
+        "COMPUTER",
+        "FASHION",
+        "HEALTH CARE",
+        "FOOD" ,
+        "SPORT",
+        "ELECTRIC",
+        "BOOK",
+        "ENTERTAIN" ,
+        "GAME",
+        "EDU",
+        "PET",
+        "INSURANCE",
+        "OTHER"
+    ]
 
+}
 
-
-// redis 用户信息过期时间
-config.USER_INFO_EXPIRED_DURATION = 1000 *  60 * 10
-
-// jwt secret
-config.JWT_SECRET = "OREO_NOT_COOKIE"
-
-
-
-module.exports = config
+module.exports = constants

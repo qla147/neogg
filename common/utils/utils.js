@@ -1,5 +1,5 @@
 const utils = {}
-const config = global._config
+const config = global.commonConfig || {serverNo :"200"}
 const ErrorCode = require("../const/ErrorCode")
 
 /**
@@ -11,7 +11,7 @@ const ErrorCode = require("../const/ErrorCode")
  * @constructor
  */
 utils.Success = function (data, msg = "ok" ) {
-    return {data, msg , success: true  , code : config.serverNo  + "000" , timeStamp : Date.now() , error : null }
+    return {data, msg , success: true  , code :  "000000" , timeStamp : Date.now() , error : null }
 }
 /**
  * @author hhh
@@ -23,7 +23,7 @@ utils.Success = function (data, msg = "ok" ) {
  * @constructor
  */
 utils.Error = function (error , code = ErrorCode.INTERNAL_ERROR , msg = "INTERNAL_ERROR"  ){
-    return {data: null  , msg , code: config.serverNo+ code , error  , success: false ,timeStamp : Date.now() }
+    return {data: null  , msg , code: config.serverNo+code , error  , success: false ,timeStamp : Date.now() }
 }
 
 /**

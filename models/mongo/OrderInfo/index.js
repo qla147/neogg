@@ -3,20 +3,24 @@ const Schema = mongoose.Schema
 
 const OrderGoodsInfo = new Schema({
     goodsId : {
-        type : mongoose.Types.ObjectId,
-        ref :"goodsInfo",
+        type : Schema.Types.ObjectId,
+        ref :"goods_info",
         desc :"商品信息ID"
     },
     goodsName :{
         type : String ,
         desc :"商品名称"
     },
-    count :{
+    goodsCount :{
         type : Number ,
         desc :"商品数量",
         min: 0
     },
-    price :{
+    goodsImgs :{
+        type : Schema.Types.Array,
+        desc:"商品的图片"
+    },
+    goodsPrice :{
         type : Number ,
         desc :"商品单价",
         min: 0
@@ -25,9 +29,9 @@ const OrderGoodsInfo = new Schema({
 
 const OrderInfo = new Schema({
     userId :{
-        type : mongoose.Types.ObjectId,
+        type : Schema.Types.ObjectId,
         desc : "用户ID",
-        ref: "userInfo",
+        ref: "user_info",
         required : true
     },
     createTime :{
@@ -38,26 +42,32 @@ const OrderInfo = new Schema({
         type : Number ,
         desc : "过期时间",
     },
-    status :{
+    orderStatus :{
         type: Number  ,
-        enum:[0,1,2,3],
+        enum:[0,1,2,3,4,5],
         default : 0 ,
         desc :{
             detail : "订单状态",
             enums :{
                 0: "待支付",
+                1: "取消",
+                2: "失效",
                 3: "支付成功",
-                2: "过期",
-                1: "取消"
+                4: "退货退款",
+                5: "完成"
             }
         }
     },
-    totalPrices:{
+    totalPrice:{
         type : Number ,
         desc :"订单金额",
         min: 0
     },
-    goodsInfos : {
+    totalCount:{
+        type: Schema.Types.Number,
+        desc: "订单商品数量"
+    },
+    orderGoodsInfo : {
         type: [OrderGoodsInfo],
         desc :"订单包含商品列表"
     },
@@ -66,10 +76,25 @@ const OrderInfo = new Schema({
       desc :"支付时间"
     },
     payMethod :{
-        type : String ,
-        desc :"支付方式"
+        type : Number ,
+        enum:[1,2,3,4],
+        desc : {
+            detail:"支付方式",
+            enums:{
+                1: "digital wallet",
+                2: "credit card",
+                3: "bitcoin",
+                4: "wechat",
+            }
+        }
     }
-},{collection: "orderInfo"})
+})
 
 OrderInfo.index({userId :1 ,createTime : -1 })
 OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
+
+
+module.exports =  {
+    OrderInfoMongoModel : mongoose.model("order_info", OrderInfo, "order_info" ),
+    OrderInfoBackUpMongoModel :  mongoose.model("order_info_back", OrderInfo, "order_info_back")
+}

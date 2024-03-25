@@ -3,30 +3,29 @@ const redisClient = require("../../../common/db/redis")
 const utils = require("../../../common/utils/utils")
 
 
-class OrderInfo {
-    constructor() {
-    }
-
+const  OrderInfoRedisLock =  {
     /**
      * @author hhh
      * @date 2024年3月13日01:05:02
      * @param orderId 订单号
-     * @param payServerNo 支付服务器编号
      * @description 给订单加锁
      * @returns {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
      */
-    async lockOrder (orderId , payServerNo) {
+     lock:async (orderId )=> {
         try{
-            let rs = await redisClient.setnx(orderId, payServerNo)
+            let key = `lock:order:${orderId}`
+            let rs = await redisClient.setnx(key, 1)
             // 设置一个小时过期
-            await redisClient.expire(orderId, 60 * 60 )
-            return utils.Success(!!rs)
+            if(rs === 1 ){
+                await redisClient.expire(key,  30 )
+            }
+            return utils.Success(rs)
         }catch (e) {
             console.error(e);
             return utils.Error(e);
         }
 
-    }
+    },
 
     /**
      * @author : hhh
@@ -35,9 +34,10 @@ class OrderInfo {
      * @returns {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
      * @description 释放订单锁
      */
-    async localOrder (orderId ) {
+     unlock: async (orderId ) =>{
         try{
-            await redisClient.del(orderId)
+            let key = `lock:order:${orderId}`
+            await redisClient.del(key)
             return utils.Success(null)
         }catch (e) {
             console.error(e)
@@ -48,4 +48,4 @@ class OrderInfo {
 }
 
 
-module.exports = OrderInfo
+module.exports = {OrderInfoRedisLock}

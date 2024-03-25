@@ -1,21 +1,17 @@
 const express = require("express")
-const utils = require("../../common/utils/utils")
+const utils = require("../../common/utils/utils");
+const ErrorCode = require("../../common/const/ErrorCode");
+const fileService = require("../../services/FileService/download")
 const router = express.Router()
 
 /**
- * 用户文件实体上传
+ * 文件下载专用
  */
-router.post("/file" ,(req , res) =>{
-  console.log(req.files)
-  return res.json(utils.Success())
-})
-
-
-router.post("/info" , (req , res)=>{
-  const {fileName , fileMd5 , fileSize , fileFormat} = req.body
-  const userInfo  = req.userInfo
-
-  return res.json(utils.Success(userInfo  ))
+router.get("/:fileMd5", async (req, res)=>{
+    let {fileMd5} = req.params
+    if (!fileMd5 || fileMd5.length !== 32){
+        return res.json(utils.Error(null ,ErrorCode.PARAM_ERROR,"fileMd5" ))
+    }
 })
 
 
