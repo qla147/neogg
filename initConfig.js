@@ -24,12 +24,11 @@ const inits = {
     afterInit:async ()=>{
         try{
             //
-            let registerRs = await consul.registerServer()
-            if (!registerRs.success){
-                return registerRs
-            }
-            const rs = await consul.initService()
-            return rs
+            // if (!registerRs.success){
+                return await consul.registerServer()
+            // }
+            // const rs = await consul.initService()
+            // return rs
         }catch (e) {
             console.error(e)
             return utils.Error(e)

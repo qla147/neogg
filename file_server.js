@@ -85,15 +85,15 @@ init().then(rs=>{
     server.on('listening', ()=>{
         console.error("the server is starting at : ",global._config.port,":",global._config.host )
         // registered to consul
-        // initConfig.afterInit().then(rs=>{
-        //     if (!rs.success){
-        //         console.error(rs.error , rs.msg)
-        //         process.exit(1)
-        //     }
-        // }).catch(err=>{
-        //     console.error(err)
-        //     process.exit(1)
-        // })
+        initConfig.afterInit().then(rs=>{
+            if (!rs.success){
+                console.error(rs.error , rs.msg)
+                process.exit(1)
+            }
+        }).catch(err=>{
+            console.error(err)
+            process.exit(1)
+        })
     });
     server.on("error", (err)=>{
         console.error(err)
