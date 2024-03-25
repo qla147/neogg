@@ -7,7 +7,6 @@ const form = formidable({
 
 
 
-
 const fileMiddleware = (req, res, next)=>{
     form.parse(req, (err, fields, files) => {
         if (err) {
@@ -18,6 +17,7 @@ const fileMiddleware = (req, res, next)=>{
         req.files = files;
         next();
     });
+
 }
 
 module.exports =  fileMiddleware

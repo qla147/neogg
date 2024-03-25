@@ -1,5 +1,4 @@
 const mongoose = require("../../../common/db/mongo")
-const phoneUtil = require('google-libphonenumber').PhoneNumberUtil.getInstance();
 const Schema = mongoose.Schema
 
 const UserInfo = new Schema({

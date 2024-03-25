@@ -28,7 +28,7 @@ const  CartInfoSchema = new Schema({
         type: Number ,
         desc :"添加时间"
     }
-},{collection:"cartInfo"})
+},)
 
 
 CartInfoSchema.index({ goodsId: 1 , userId : 1 })
@@ -36,5 +36,5 @@ CartInfoSchema.index({ userId : 1 , addTime : -1 })
 CartInfoSchema.index({ userId : 1})
 
 module.exports = {
-    CartInfoModel: mongoose.model("cart_info", CartInfoSchema)
+    CartInfoModel: mongoose.model("cart_info", CartInfoSchema, "cart_info")
 }

@@ -10,309 +10,107 @@
 
 ### 服务器划分
 
-本系统根据业务特性和对服务器的要求不一致，个人推荐划分为三个独立的服务
+#### shop_server
 
-#### 文件存储服务器：
+**用于实现商品，购买和支付等功能**
 
-用户存储用户上传的商品信息，生成文件下载或者访问链接；
+使用组件： 
 
-##### 主要实现逻辑：
++ redis : 
 
-1. 使用物理机存储用户的文件信息，不使用数据库存储文件，虽然MongoDB 等是支持文件存储，我一致秉承专业的工具做专业的事情
+  1. 用户token的存储 ，目前没有实现权限中心故没有使用到
+  2. 商品，订单，支付等分布式锁功能
+  3. 商品信息的缓存
 
-2. 文件采用文件内容md5值来实现文件的唯一性验证，解决用户多次重复上传文件，或者同资源多用户共享问题，减小服务器资源消耗；
++ mongodb
 
-3. 文件上传采用字节分段上传，
+  商品信息， 订单， 购物车，用户信息等存储主库
 
-   例如100M的视频文件可以每1M一个段，把整个代上传的文件切分100份， 每份文件都标识序号，在所有文件都上传到服务器，按照序号拼合，检验md5值，后写入指定文件夹；
++ es
 
-   具体实现中，采用MongoDB 记录用户文件的基本信息和文件物理信息，分2个collection来记录，因为单个相同文件多用户共享，故文件物理信息和用户文件信息需要分开存储；
+  用于商品的信息的全文检索，这里支持了少量字段的全文检索，后期可以添加
 
-   使用redis的list数据结构来记录上传进，list的每个unit存储文件已经上传部分的序号，key为文件的md5经过二次md5值(该值作为用户实际上传的文件token)， 同时对key设置过期，可以根据文件大小来设置过期，推荐小于10m的文件设置半个小时；文件上传整体完成删除该redis记录
+#### file_server
 
-4. 数据部分
+**用于实现商品详情的图片，视频等资源的存储**
 
-   redis: 存储正在上传文件已经上传的切分文件的序号
+使用组件：
 
-   + key : 待上传文件的md5值二次md5值
-   + value：完成该文件已经成完成上传的切分文件序号
-   + format: list
-   + expired: 自动过期删除（根据文件大小动态设置）和手动删除（上传完成就手动删除）
++ mongodb:
+  1. 作为文件的主存储器，使用mongodb的gridfs功能实现
++ redis
+  1. 用户token的存储 ，目前没有实现权限中心故没有使用到
 
-   mongodb collection:
 
-   + file（文件物理信息表） : 存储文件的基本物理信息
 
-     ~~~js
-     const Schema = mongoose.Schema
-     const FileSchema = new Schema({
-         fileMd5 : {
-             type : String ,
-             desc :"文件md5",
-             required: true
-         },
-         filePath :{
-             type: String ,
-             desc:"文件物理存储地址",
-             required: true
-         },
-         isShare :{
-             type : Boolean ,
-             default : false ,
-             desc :"是否为共享文件"
-         }
-     },{
-         collection: "file"
-     })
-     ~~~
+### 开发设计历史
 
-   + fileInfo（文件记录表）: 存储用户上传文件的记录，需要记录引用file表
+1. 第一阶段设计服务器时，准备把支付拆成一个独立的服务器，后来想想这个只是个作业，不需要那么复杂，因此没有拆分出去， 如果后期需要扩展各种类型的支付或者各种货币的支付等等，还是可以拆出去的
 
-     ~~~js
-     const Schema = mongoose.Schema
-     const FileInfoSchema = new Schema({
-         fileSize :{
-             required : true ,
-             type : Number ,
-             desc :"文件大小"
-         },
-         fileMd5 :{
-             required : true ,
-             type : String ,
-             desc : "文件md5值"
-         },
-         fileType :{
-           type : String,
-           // enum :["video","audio","doc" , "pdf", "xls","xlsx","img"],
-           desc :"文件类型"
-         },
-         fileUrl : {
-           type : String ,
-           desc :"文件下载url"
-         },
-         fileStatus :{
-           type: Number ,
-           desc :{
-               0: "待上传",
-               1: "上传完成",
-               2: "正在上传中"
-           },
-           enum: [1, 2, 0],
-           default : 0
-         },
-         isShared: {
-             default : false ,
-             type : Boolean ,
-             desc :"共享文件"
-         },
-         userId :{
-             type : mongoose.Types.ObjectId,
-             desc :"上传用户ID",
-             ref: "userInfo"
-         },
-         autoDelete: {
-             type: Number ,
-             desc : "上传没有完成-自动删除时间"
-         },
-         completeTime : {
-             type : Number ,
-             desc :"完成上传的时间"
-         },
-         createTime : {
-             type : Number ,
-             desc :"创建时间"
-         },
-         fileId:{
-             type : mongoose.Types.ObjectId,
-             ref :"file",
-             desc :"文件物理存储表"
-         }
-     
-     },{
-         collection :"fileInfo"
-     })
-     ~~~
+2. 在开发文件存储服务器的时候，刚开始是使用分割文件上传，文件存储本地；后来发现了弊端： 1.这样设计使得文件服务器不能横向扩展；2. 存储本地也不好管理； 因此采用了数据库存储， 刚开始查资料看了几种方案， 候选是hadoop、mongodb 方案, 因此这个服务开发指定了mongodb数据库，因此这里就直接mongodb的gridfs存储
 
-5. 接口部分：设计4个接口即可完成文件服务器； 
+   
 
-   + 文件信息上传接口；
+### 关于开发设计原则
 
-     获取用户需要上传文件的基本信息，同时判断该文件的相同的文件是否已经存在；如果该文件已经被上传过了，生成文件下载url地址，写入fileInfo(文件记录表)数据库，用户不需要上传文件实体，随后返回该信息；
+**simple is the best**
 
-     如果没有找到该文件相同的md5值的文件； 那么生成基本fileInfo（文件记录表）写入数据库。 生成该待上传的上传token 和切分信息 返回客户端；切分上传信息写入redis ;
+### 关于前端
 
-   + 文件上传接口
+我已经很久没有写过前端了，如果要捡起来大概需要15天附近
 
-     在文件没有被上传，且相同md5值的文件在服务器中不存在时，根据“文件信息上传接口”返回的文件切分上传信息和token，上传文件；
+### 关于其他 
 
-     node.js主流支持文件上传的中间件有multer 和formidable，可以使用该中间实现表单提交文件接口服务（我常用formidable）；
+**面谈**
 
-     提交表单数据需要包含用户信息，文件上传token，文件切片标号；
 
-     把上传的切片文件写入临时文件，并写入redis;同时检测所有的切片文件是否已经上传完成， 上传完成就合并文件，写入文件夹， 生成file（文件物理信息）写入库，同时更新fileInfo表; 并返回fileInfo信息给客户端
-
-   + 文件下载接口
-
-     客户端拿到fileInfo中的fileUrl，直接访问获取文件；在该接口中需要提供用户鉴权信息，进行检测；同时需要根据待下载的文件大小，来判断使用何种方式回传数据，如果文件大小超过一定的阈值需要使用文件流方式来读取文件进行回传下载，如果是小文件直接回传即可
-
-##### 设计优势
-
-+ 支持同文件多用户共享，避免重复上传，存储
-+ 支持多文件并行上传，高速（需要服务器支持）
-+ 独立服务使用http访问，支持横向扩展（需要ng支持，需同一文件的切分文件上传访问相同服务器）
-
-#####  设计劣势
-
-+ 复杂度增加
-+ 需要定时器删除上传一半不再上传的文件记录
-
-#### 商品信息服务
-
-主要用商品信息展示和检索功能，以及订单生成功能（支付功能需要独立出来）
-
-##### 主要实现逻辑
-
-1. 商品列表页面的实现
-
-   数据存储使用 MongoDB + ElasticSearch存储解决方案，采用空间换性能的解决方案；
-
-   简单说就是Mongodb存储商品的详细信息，ElasticSearch中存储需要被客户端全局检索商品字段和MongDB商品信息主键；
-
-   为什么要这样做，在使用实际产品过程，特别是购物类产品，常常需要 模糊的全局检索，那么问题就来了，mongodb对查询的优化仅仅支持左端开头字符串模糊查询优化，官方文档也是说明了需要全文或全字段模糊查询最好使用ElasticSearch支持；这里指定了MongoDB作为必选数据库，所以只能加一层ElasticSearch是目前的最优解，即使选了mysql（常用innoDB）作为主存储，其索引数据结构和mongodb(4.0版本后默认引擎)具有相似性，因此对全文检索或者like“%{value}%”的支持也不足的，根本没法优化(我遇到过)，数量少还好说，数据多了简直就是噩梦；
-
-   同时商品在写入mongo之时，需要使用redis缓存起来，格式使用list格式，key使用商品的主键ID, valus为实际商品购买者ID , 在支付之前可以为零值， list长度应该是等于该商品的数量； 为什么这么设计呢？防止超卖！如果商品数量非常多，导致redis消耗资源比较多可以使用360团队出品的pika兼容redis
-
-2. 商品详细页面, 展示商品的具体信息(文字/图片/视频元素都需要);
-
-   商品详情页面这边，由于存在自己搭建的文件服务，所以这里商品详情就很好解决了，由于图片或者视频元素采用url的形式存在，所以直接从库中取html模板，加载文件url 直接渲染即可; 这种静态的资源完全采用CDN形式加速
-
-3. 商品的添加购物车和支付
-
-   1. 这部分也是整个系统最难的点； 首先是关联的数据collection较多，同时需要事务的支持，而mongodb的“事务”是基于复制集模式，因此在搭建mongodb服务器之时需要采用复制集模式；
-   2. 为了增大系统吞吐量，独立出来支付系统，开发成为一个可以横向扩展的服务，支付订单采用专用redis数据锁和rabbitmq来交换支付信息，同时结合mongodb的事务；防止发生重复支付或者其他数据问题。如果还想增加容量可以考虑mongodb的分片思想
 
 ## MongoDB字段
 
-### File collection
+**所有的mongodb的索引字段均未建立，索引需要根据实际的情况是建立索引，因为索引也是一种资源消耗**
 
-文件物理表 存放于oss.fileInfo
+### CartInfo 
 
-#### model & index
+购物车mongodb 数据库
 
-~~~js
-const FileSchema = new Schema({
-    fileMd5 : {
-        type : String ,
-        desc :"文件md5",
-        required: true,
-        index:true ,
-        unique: true
+~~~json
+const  CartInfoSchema = new Schema({
+    goodsId :{
+        type : Schema.Types.ObjectId,
+        desc : "商品ID",
+        ref:"goodsInfo"
     },
-    filePath :{
-        type: String ,
-        desc:"文件物理存储地址",
-        required: true
+    goodsName :{
+        type:String ,
+        desc :"商品名称"
     },
-    isShare :{
-        type : Boolean ,
-        default : false ,
-        desc :"是否为共享文件"
-    }
-},{
-    collection: "file"
-})
-
-FileSchema.index({ fileMd5: 1 }); // 查询索引
-FileSchema.index({ fileMd5: 1, isShare: 1}) // 定时器删除索引
-
-~~~
-
-### FileInfo collection
-
-文件上传信息表， 存放于oss.fileInfo
-
-#### model & index 
-
-~~~js
-
-
-const FileInfoSchema = new Schema({
-    fileSize :{
-        required : true ,
-        type : Number ,
-        desc :"文件大小"
+    goodsCount :{
+        type : Number,
+        min: 1 ,
+        max: 9999,
+        desc :"商品数量"
     },
-    fileMd5 :{
-        required : true ,
-        type : String ,
-        desc : "文件md5值"
+    userId:{
+      type : Schema.Types.ObjectId,
+      desc : "用户ID",
+      ref: "userInfo",
+      required : true
     },
-    fileType :{
-      type : String,
-      // enum :["video","audio","doc" , "pdf", "xls","xlsx","img"],
-      desc :"文件类型"
-    },
-    fileUrl : {
-      type : String ,
-      desc :"文件下载url"
-    },
-    fileStatus :{
-      type: Number ,
-      desc :{
-          0: "待上传",
-          1: "上传完成",
-          2: "正在上传中"
-      },
-      enum: [1, 2, 0],
-      default : 0
-    },
-    isShared: {
-        default : false ,
-        type : Boolean ,
-        desc :"共享文件"
-    },
-    userId :{
-        type : mongoose.Types.ObjectId,
-        desc :"上传用户ID",
-        ref: "userInfo"
-    },
-    autoDelete: {
+    createTime :{
         type: Number ,
-        desc : "上传没有完成-自动删除时间"
-    },
-    completeTime : {
-        type : Number ,
-        desc :"完成上传的时间"
-    },
-    createTime : {
-        type : Number ,
-        desc :"创建时间"
-    },
-    fileId:{
-        type : mongoose.Types.ObjectId,
-        ref :"file",
-        desc :"文件物理存储表"
+        desc :"添加时间"
     }
-
-},{
-    collection :"fileInfo"
 })
-
-
-FileInfoSchema.index({fileMd5:1 , userId :1 })
-FileInfoSchema.index({autoDelete:1 , fileStatus: 1 })
 ~~~
 
 
 
-### GoodsInfo collection
+### GoodsBasicInfo
 
-商品信息表，存放于goods.goodsInfo 
-
-#### model & index
+商品基本信息collection
 
 ~~~js
-const GoodsInfo = new Schema({
+const GoodsBasicInfo = new Schema({
     goodsType:{
         type: String ,
         desc :"商品类型"
@@ -321,67 +119,60 @@ const GoodsInfo = new Schema({
         type : String  ,
         desc : "商品名称"
     },
-    saleTime :{
-        type : Number ,
-        desc : "开售时间, 格式timestamp",
-    },
-    goodsUsdPrice:{
+    // saleTime :{
+    //     type : Number ,
+    //     desc : "开售时间, 格式timestamp",
+    // },
+    goodsPrice:{
         type: Number ,
-        desc :"商品售价,以美分为单位",
+        desc :"商品售价,放大100倍",
         min: 0
     },
     goodsCount : {
         type: Number ,
-        desc :"商品可售数量",
+        desc :"商品原始可售数量",
         min:0 ,
         max:9999
     },
-    status:{
+    goodsImgs :[{
+        type : String,
+        desc : "商品图片"
+    }],
+    goodsStatus:{
         type: Number ,
         desc :{
             detail : "商品状态",
             enums:{
-                0 : "待上架",
-                1 : "上架售卖中",
-                2 : "下架",
-                3 : "售罄"
+
+                1 : "有货",
+                2 : "售罄"
             }
         },
-        enum:[0,1,2,3]
+        enum:[1,2]
     },
-    goodsDetailId :{
-        type : mongoose.Types.ObjectId,
-        ref :"goodsDetail",
-        desc :"商品详情信息"
-    },
-    SoldCount:{
+    soldCount:{
         type: Number,
-        desc:"以后售卖的数量",
+        desc:"售卖的数量",
         default: 0
     },
     createTime : {
         type : Number,
         desc :  "创建时间"
     },
-}, {collection:"goodsInfo"})
-
-GoodsInfo.index({goodsName : 1 ,goodsType : 1 , saleTime : -1 })
-
+}, {collection:"goods_info"})
 ~~~
 
 
 
-### GoodDetail
+### GoodsDetail
 
-商品详情表 存放于goods.goodsDetail
+商品详情collection
 
-#### model & index 
-
-~~~json
+~~~js
 
 const GoodsDetail = new Schema({
     goodsId :{
-        type: mongoose.Types.ObjectId,
+        type: Schema.Types.ObjectId,
         desc : "商品ID",
         ref : "goodsInfo",
         index: true ,
@@ -393,90 +184,30 @@ const GoodsDetail = new Schema({
         desc : "详情页面html文本"
     },
     extraData :{
-        type: mongoose.Types.Map,
+        type: Schema.Types.Map,
         desc :"渲染需要的参数"
+    },
+    createTime :{
+        type: Number,
+        desc :"创建时间"
     }
-}, {collection: "goodsDetail"})
+}, {collection: "goods_detail"})
 
-
-~~~
-
-### CartInfo 
-
-购物车信息 存放于 goods.cartInfo 
-
-#### model & index
-
-~~~json
-
-const  CartInfo = new Schema({
-    goodsId :{
-        type : mongoose.Types.ObjectId,
-        desc : "商品ID",
-        ref:"goodsInfo"
-    },
-    goodsPrice:{
-        type: Number , 
-        desc :"商品单价 没分计价",
-    	min: 0 
-    },
-    count :{
-        type : Number,
-        min: 0 ,
-        max: 9999,
-        desc :"商品数量"
-    },
-    userId:{
-      type : mongoose.Types.ObjectId,
-      desc : "用户ID",
-      ref: "userInfo",
-      required : true   
-    },
-    addTime :{
-        type: Number ,
-        desc :"添加时间"
-    }
-},{collection:"cartInfo"})
-
-
-CartInfo.index({goodsId: 1 , userId : 1 })
-CartInfo.index({ userId : 1 , addTime : -1 })
 ~~~
 
 
 
-### OrderInfo
+###  OrderInfoMongoModel & OrderInfoBackUpMongoModel
 
-订单表 存放于 order.orderInfo
+订单表collection、和删除订单的备份collection
 
-~~~json
-const OrderGoodsInfo = new Schema({
-    goodsId : {
-        type : mongoose.Types.ObjectId,
-        ref :"goodsInfo",
-        desc :"商品信息ID"
-    },
-    goodsName :{
-        type : String ,
-        desc :"商品名称"
-    },
-    count :{
-        type : Number ,
-        desc :"商品数量",
-        min: 0
-    },
-    price :{
-        type : Number ,
-        desc :"商品单价",
-        min: 0
-    }
-})
+~~~js
 
 const OrderInfo = new Schema({
     userId :{
-        type : mongoose.Types.ObjectId,
+        type : Schema.Types.ObjectId,
         desc : "用户ID",
-        ref: "userInfo",
+        ref: "user_info",
         required : true
     },
     createTime :{
@@ -487,17 +218,19 @@ const OrderInfo = new Schema({
         type : Number ,
         desc : "过期时间",
     },
-    status :{
+    orderStatus :{
         type: Number  ,
-        enum:[0,1,2,3],
+        enum:[0,1,2,3,4,5],
         default : 0 ,
         desc :{
             detail : "订单状态",
             enums :{
                 0: "待支付",
+                1: "取消",
+                2: "失效",
                 3: "支付成功",
-                2: "过期",
-                1: "取消"
+                4: "退货退款",
+                5: "完成"
             }
         }
     },
@@ -506,7 +239,11 @@ const OrderInfo = new Schema({
         desc :"订单金额",
         min: 0
     },
-    goodsInfos : {
+    totalCount:{
+        type: Schema.Types.Number,
+        desc: "订单商品数量"
+    },
+    orderGoodsInfo : {
         type: [OrderGoodsInfo],
         desc :"订单包含商品列表"
     },
@@ -515,15 +252,84 @@ const OrderInfo = new Schema({
       desc :"支付时间"
     },
     payMethod :{
-        type : String ,
-        desc :"支付方式"
+        type : Number ,
+        enum:[1,2,3,4],
+        desc : {
+            detail:"支付方式",
+            enums:{
+                1: "digital wallet",
+                2: "credit card",
+                3: "bitcoin",
+                4: "wechat",
+            }
+        }
     }
-},{collection: "orderInfo"})
+})
+~~~
 
-OrderInfo.index({userId :1 ,createTime : -1 })
-OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 }) 
+
+
+### UserInfo
+
+用户信息表
+
+~~~js
+
+const UserInfo = new Schema({
+    userName: {
+        type: String,
+        required: true,
+        desc: "用户名称"
+    },
+    userAvatar: {
+        type: String,
+        desc: "用户图像地址"
+    },
+    userStatus: {
+        type: String,
+        enum: [0, 1],
+        desc: {
+            detail: "用户状态",
+            0: "停止使用",
+            1: "正常"
+        }
+    },
+    userTelNo: {
+        type: String,
+        desc: "用户电话号码",
+        // validate: (val) => {
+        //     return !phoneUtil.isValidNumber(val)
+        // }
+    },
+    userEmail: {
+        type: String,
+        desc: "用户邮箱"
+    },
+    userWallet: {
+        type: Number,
+        default: 0,
+        desc: "用户钱包"
+    },
+    createTime: {
+        type: Number,
+        desc: "创建时间"
+    },
+    userLoginName: {
+        type: String,
+        required: true,
+        unique: true,
+        desc: "用户登录名"
+    },
+    userPassword: {
+        type: String,
+        desc: "用户登录密码"
+    }
+})
+
 
 ~~~
+
+
 
 
 
@@ -532,18 +338,35 @@ OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
 ### 错误码部分
 
 ~~~js
-{
+const Code =  {
     "GOODS_DETAIL_NOT_FOUND" :"100", // 商品详情没有找到
     "GOODS_INFO_NOT_FOUND" :"101", // 商品信息没有找到
     "GOODS_INFO_EXIST": "102",      // 商品已经存在
+    "GOODS_OUT_OF_STOCK" :"103",    // 商品库存不足无法下定
 
 
     "LOCK_GOODS_INFO": "200", // 商品被锁住，请稍后再试
 
 
+    "CART_INFO_NOT_FOUND":"300", // 购物车内指定商品没有找到
+
+
+    "ORDER_INFO_NOT_FOUND": "400",// 订单信息没有找到
+    "ORDER_STATUS_NOT_KNOWN": "401",// 订单状态未知
+    "ORDER_STATUS_CANCELED" :"402", // 订单已经取消
+    "ORDER_STATUS_REFUND" :"403", // 订单已经退货退款
+    "ORDER_STATUS_PAYED" :"404" , // 订单已经被支付
+    "ORDER_STATUS_COMPLETED":"405", // 订单已经完成，请走退货退款流程
+    "ORDER_STATUS_INVALIDATION":"406", // 订单已经失效
+    "ORDER_PAY_METHOD_ONLY_SUPPORT_DIGITAL_WALLET" :"407" ,// 目前仅仅支持用户钱包支付
+    "ORDER_PAY_LOCKED" : "408", // 订单被锁定，请稍后再试
+    "ORDER_PAY_USER_WALLET_LOCKED" : "409", // 用户钱包被锁定，请稍后再试
+    "ORDER_PAY_USER_WALLET_BALANCE_INSUFFICIENT" : "410", // 用户钱包余额不足
+
+
     "INTERNAL_ERROR": "500", // 内部错误
     "MONGODB_ERROR": "501" ,    //mongodb 错误
-    "REDIS_ERROR":" 502",   // redis 错误
+    "REDIS_ERROR":"502",   // redis 错误
     "OUTER_SERVER_ERROR": "503", // 外部服务错误
     "ES_ERROR": "504", // elasticsearch 错误
     "FILE_NO_FOUND_ERROR" : "505", //文件没有找到错误
@@ -557,17 +380,86 @@ OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
     "FILE_UPLOAD_TASK_NOT_FOUND": "613", //文件上传任务不存在
     "FILE_UPLOAD_TASK_COMPLETE": "614", //文件上传任务已经完成
     "FILE_SLICE_ERROR" : "615", //文件上传切片错误
+    "FILE_GRIDFS_ERROR" :"616" //文件上传 mongo gridFs 错误
+
+
 }
 
 ~~~
 
 
 
+### 文件上传和下载
+
+**server:  file_server**
+
+#### 文件上传接口
+
++ desc
+
+  使用form表单提交， 支持多文件上传
+
++ router
+
+  /file/v2/api/up
+
++ method
+
+  POST
+
++ request param sample
+
+  ~~~shell
+  curl --location 'http://192.168.2.2:8080/file/v2/api/up' \
+  --form 'spss23=@"/D:/BaiduNetdiskDownload/07_R语言/数据分析与SPSS(完整)共12周/SPSS01/spss01b.mp4"'
+  ~~~
+
+  
+
++ request param table
+
+  **form表单提交，支持多文件， 多文件上传直接往**
+
+  | name | in   | type | desc       |
+  | ---- | ---- | ---- | ---------- |
+  | ***  | form | file | 待上传文件 |
+
+  
+
++ response sample
+
+  ~~~json
+  {
+      "data": [
+          {
+              "fileId": "66014b5095678b7500795175",
+              "url": "http://192.168.2.4:8080/file/v2/api/down/fa7086b521142714d27d9c713aab206f"
+          }
+      ],
+      "msg": "ok",
+      "success": true,
+      "code": "000000",
+      "timeStamp": 1711360851985,
+      "error": null
+  }
+  
+  ~~~
+
+  
+
+
+
 ### 商品相关接口
+
+**server:  shop_server**
 
 #### 新增商品
 
-+ desc 
++ server
+
+  ```
+  shop_server
+  ```
 
 + router
 
@@ -635,7 +527,11 @@ OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
 
 #### 修改商品
 
-+ desc 
++ server
+
+  ```
+  shop_server
+  ```
 
 + router
 
@@ -699,6 +595,12 @@ OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
   
 
 #### 商品列表(包含检索)
+
++ server
+
+  ```
+  shop_server
+  ```
 
 + desc
 
@@ -800,6 +702,12 @@ OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
 
 #### 根据商品ID获取商品信息
 
++ server
+
+  ```
+  shop_server
+  ```
+
 + desc 
 
   rt
@@ -855,6 +763,12 @@ OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
 
 #### 根据商品ID获取商品详情
 
++ server
+
+  ```
+  shop_server
+  ```
+
 + desc
 
   RT
@@ -877,7 +791,7 @@ OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
   | NAME    | IN   | TYPE   | ENUMS | REQUIRED | DEFAULT | DESC   |
   | ------- | ---- | ------ | ----- | -------- | ------- | ------ |
   | goodsId | Path | String |       | true     |         | 商品ID |
-  
+
 + response param sample 
 
   ~~~json
@@ -924,6 +838,8 @@ OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
   
 
 ### 购物车相关接口
+
+**server:  shop_server**
 
 #### 用户购物车列表检索
 
@@ -1091,7 +1007,298 @@ OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
 
 #### 购物车商品生成订单
 
-+ 
++ desc
+
+  商品购物车内的商品直接生成订单，同时删除原来的购物车
+
++ router
+
+  /shop/v1/api/cart/order
+
++ request param sample
+
+  ~~~shell
+  curl --location 'http://192.168.2.2:8090/shop/v1/api/cart/order' \
+  --header 'Content-Type: application/json' \
+  --data '["66003ad8e7010efe0868eff5"]'
+  ~~~
+
+  
+
++ request param table
+
+  | NAME   | IN   | TYPE          | ENUMS | REQUIRED | DEFAULT | DESC                                  |
+  | ------ | ---- | ------------- | ----- | -------- | ------- | ------------------------------------- |
+  | cartId | Body | Array<String> |       | true     |         | 商品购物车ID数组，直接存放入data/body |
+
++ response param sample
+
+  ~~~json
+  
+  {
+      "msg": "ok",
+      "success": true,
+      "code": "100000",
+      "timeStamp": 1711332209243,
+      "error": null
+  }
+  ~~~
+
+### 订单相关接口
+
+**server:  shop_server**
+
+#### 订单列表检索
+
++ router
+
++ method
+
++ request params sample
+
+  ~~~shell 
+  curl --location 'http://192.168.2.2:8090/shop/v1/api/orderAndPay?goodsName=hon&orderStatus=0&pageSize=10&pageNo=0'
+  ~~~
+
+  
+
++ request params table
+
+  | NAME        | IN    | TYPE   | ENUMS | REQUIRED | DEFAULT | DESC     |
+  | ----------- | ----- | ------ | ----- | -------- | ------- | -------- |
+  | goodsName   | query | String |       | false    |         | 商品名称 |
+  | orderStatus | query | Number |       | false    |         | 订单状态 |
+  | pageNo      | query | Number |       | false    | 0       | 分页参数 |
+  | pageSize    | query | Number |       | false    | 10      | 分页参数 |
+
++ response param sample
+
+  ~~~json
+  {
+      "data": {
+          "list": [
+              {
+                  "_id": "6600db7190d9d0181f644c35",
+                  "userId": "660036a6c8f9e09dff0bf1f6",
+                  "createTime": 1711332209212,
+                  "expiredDate": 1711334009212,
+                  "orderStatus": 0,
+                  "totalPrice": 1200000,
+                  "totalCount": 1,
+                  "orderGoodsInfo": [
+                      {
+                          "goodsId": "66003ad8e7010efe0868eff5",
+                          "goodsName": "HONDA",
+                          "goodsCount": 1,
+                          "goodsImgs": [
+                              "https://n.sinaimg.cn/sinakd20108/600/w1920h1080/20200608/297c-iurnkps0366424.jpg"
+                          ],
+                          "goodsPrice": 1200000,
+                          "_id": "6600db7190d9d0181f644c36"
+                      }
+                  ],
+                  "__v": 0
+              }
+          ],
+          "count": 1
+      },
+      "msg": "ok",
+      "success": true,
+      "code": "100000",
+      "timeStamp": 1711336675171,
+      "error": null
+  }
+  ~~~
+
+#### 新增订单
+
++ router
+
+  /shop/v1/api/orderAndPay
+
++ method
+
+  POST
+
++ request param sample
+
+  ~~~json
+  curl --location 'http://192.168.2.2:8090/shop/v1/api/orderAndPay' \
+  --header 'Content-Type: application/json' \
+  --data '[
+      {
+          "goodsId" :"66003b20e7010efe0868effa",
+          "goodsCount" : 9
+      }
+  ]'
+  ~~~
+
+  
+
++ request param table
+
+  | NAME       | IN   | TYPE   | PARENT | ENUMS | REQUIRED | DEFAULT | DESC     |
+  | ---------- | ---- | ------ | ------ | ----- | -------- | ------- | -------- |
+  | goodsId    | body | String |        |       | true     |         | 商品ID   |
+  | goodsCount | body | Number |        |       | true     |         | 商品数量 |
+
++ response param sample
+
+  ~~~json
+  {
+      "data": {
+          "userId": "660036a6c8f9e09dff0bf1f6",
+          "createTime": 1711338825748,
+          "expiredDate": 1711340625748,
+          "orderStatus": 0,
+          "totalPrice": 1007100000,
+          "totalCount": 9,
+          "orderGoodsInfo": [
+              {
+                  "goodsId": "66003b20e7010efe0868effa",
+                  "goodsName": "PROSCHE",
+                  "goodsCount": 9,
+                  "goodsImgs": [
+                      "https://img2.baidu.com/it/u=1275372190,3235868667&fm=253&fmt=auto&app=120&f=JPEG?w=889&h=500"
+                  ],
+                  "goodsPrice": 111900000,
+                  "_id": "6600f5494963f8e8a0b9f3bc"
+              }
+          ],
+          "_id": "6600f5494963f8e8a0b9f3bb",
+          "__v": 0
+      },
+      "msg": "ok",
+      "success": true,
+      "code": "100000",
+      "timeStamp": 1711338825759,
+      "error": null
+  }
+  ~~~
+
+#### 删除订单
+
++ desc
+
+  没有完成的订单，商品会回库
+
++ router
+
+  /shop/v1/api/orderAndPay/:orderId
+
++ method
+
+  DELETE
+
++ request param sample 
+
+  ~~~shell
+  curl --location --request DELETE 'http://192.168.2.2:8090/shop/v1/api/orderAndPay/6600f5494963f8e8a0b9f3bb'
+  ~~~
+
+  
+
++ request param table
+  | NAME    | IN   | TYPE   | PARENT | ENUMS | REQUIRED | DEFAULT | DESC   |
+  | ------- | ---- | ------ | ------ | ----- | -------- | ------- | ------ |
+  | orderId | path | String |        |       | true     |         | 订单ID |
+
++ response param sample
+
+  ~~~json
+  {
+      "msg": "ok",
+      "success": true,
+      "code": "100000",
+      "timeStamp": 1711340252650,
+      "error": null
+  }
+  ~~~
+
+
+#### 订单取消
+
++ router
+
+  /shop/v1/api/orderAndPay/:orderId/cancel
+
++ method
+
+  PUT
+
++ request param sample
+
+  ~~~shell
+  curl --location --request PUT 'http://192.168.2.2:8090/shop/v1/api/orderAndPay/6600fe99159c34e701197719/cancel'
+  ~~~
+
++ request param table 
+
+  | NAME    | IN   | TYPE   | PARENT | ENUMS | REQUIRED | DEFAULT | DESC   |
+  | ------- | ---- | ------ | ------ | ----- | -------- | ------- | ------ |
+  | orderId | path | String |        |       | true     |         | 订单ID |
+
++ response param sample
+
+  ~~~json
+  
+  {
+      "msg": "ok",
+      "success": true,
+      "code": "100000",
+      "timeStamp": 1711341313863,
+      "error": null
+  }
+  ~~~
+
+  
+
+#### 订单支付
+
++ desc 
+
+  目前仅仅支持用户钱包支付
+
++ router
+
+  /shop/v1/api/orderAndPay/:orderId/pay
+
++ method
+
+  POST
+
++ request param sample
+
+  ~~~shell
+  
+  
+  ~~~
+
+  
+
++ request param table
+
+  | NAME      | IN   | TYPE   | PARENT | ENUMS     | REQUIRED | DEFAULT | DESC                                                         |
+  | --------- | ---- | ------ | ------ | --------- | -------- | ------- | ------------------------------------------------------------ |
+  | orderId   | path | String |        |           | true     |         | 订单ID                                                       |
+  | payMethod | Body | Number |        | [1,2,3,4] |          |         | 支付方式： 1: "digital wallet", 2: "credit card", 3: "bitcoin", 4: "wechat", |
+
++ response param sample
+
+  ~~~json
+  {
+      "msg": "ok",
+      "success": true,
+      "code": "000000",
+      "timeStamp": 1711343615521,
+      "error": null
+  }
+  
+  ~~~
+
+  
+
+  
 
 
 
@@ -1127,30 +1334,26 @@ OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
 
 ~~~json
 {
-    "redis": {  // redis config 
+    "redis": { 
       "host":"192.168.2.4",
       "port":"6379",
       "password":"123456"
     },
-    "mongodb":{ // mongodb config 
-        "url":"mongodb://oreo:89287503@192.168.2.4:27017,192.168.2.4:27018,192.168.2.4:27019/oss?readPreference=primaryPreferred&tls=false&replicaSet=rs&authSource=admin",
+    "mongodb":{
+        "url":"mongodb://oreo:89287503@192.168.2.4:27017,192.168.2.4:27018,192.168.2.4:27019/shop?readPreference=primaryPreferred&tls=false&replicaSet=rs&authSource=admin",
         "maxPoolSize": 20
     },
-  	"gridfs":{ // mongodb GirdFs config 
-     "url":"mongodb://oreo:89287503@192.168.2.4:27017,192.168.2.4:27018,192.168.2.4:27019/gridfs?readPreference=primaryPreferred&tls=false&replicaSet=rs&authSource=admin",
+  	"gridfs":{
+     "url":"mongodb://oreo:89287503@192.168.2.4:27017,192.168.2.4:27018,192.168.2.4:27019/file?readPreference=primaryPreferred&tls=false&replicaSet=rs&authSource=admin",
         "maxPoolSize": 20
     },
-    "es": { // elasticsearch config 
-      "url":"192.168.2.4:9200",
-      "username": "elastic",
-      "password": "89287503"
-    },
-  	"port": 8080, // server port 
-  	"filePath":"/data/upload",  // the temp dir for uploaded files 
-  	"downloadPath":"/data/download",  // 文件存储目录
-  	"downloadDomain":"http://192.168.2.4:8080/v1/api/file/download", // 文件服务下载链接
-  	"sliceFileSize": 1048576, 	// 文件切片大小
-  	"maxTempFilePersistTime": 43200000 // 文件切片文件最大保存时间（second）
+    "rabbitmq":{},
+  	"port": 8080,
+  	"filePath":"/data/upload",// 文件上传服务器
+  	"downloadPath":"/data/download",
+  	"downloadDomain":"http://192.168.2.4:8080",// 文件下载服务器
+  	"sliceFileSize": 1048576,  // v1 版本的文件切片大小
+  	"maxTempFilePersistTime": 43200000 // 临时文件最大保存时间
   }
 ~~~
 
@@ -1158,17 +1361,66 @@ OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
 
   ~~~json
   
-  
+  {
+      "redis": {
+        "host":"192.168.2.4",
+        "port":"6379",
+        "password":"123456"
+      },
+      "mongodb":{
+          "url":"mongodb://oreo:89287503@192.168.2.4:27017,192.168.2.4:27018,192.168.2.4:27019/shop?readPreference=primary&tls=false&replicaSet=rs&authSource=admin",
+          "maxPoolSize": 20
+      },
+      "es": {
+        "url":"http://elastic:89287503@192.168.2.4:9200"
+      },
+    	"port": 8090
+    }
   
   ~~~
-
   
 
+#### 本地启动
+
+~~~shell
+# 进入项目目录
+cd ./project dir
+
+# 安装包
+npm install 
+
+# npm 启动shop_server
+npm  run shop
+# node 启动 shop_server 
+node ./shop_server.js
+
+# npm 启动file_server
+npm  run file
+# node 启动 file_server 
+node ./file_server.js
+
+~~~
 
 
-## 更新记录
 
-### 20240319 商品部分接口代码开发完成
+### 构建docker镜像
+
+~~~shell
+
+# 进入项目目录
+cd ./project dir
+
+# 构建file_Server 镜像
+docker build -f .\Dockerfile_file -t file_server .
+
+ 
+ # 构建shop_server 镜像 
+ docker build -f .\Dockerfile_shop -t shop_server .
+
+ 
+~~~
+
+
 
 
 

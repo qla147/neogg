@@ -140,7 +140,7 @@ service.updateGoods = async (goodsId , param )=>{
             }
         }
         // 写入缓存
-        await GoodsInfoRedisModel.insert(goodsInfo._id.toString(),goodsInfo)
+        await GoodsInfoRedisModel.updateField(goodsInfo._id.toString(),goodsInfo.toObject())
 
         await session.commitTransaction()
         return utils.Success(null)

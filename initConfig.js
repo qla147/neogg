@@ -13,7 +13,6 @@ const inits = {
                 return configRs
             }
             console.error("Loaded config successful")
-            console.table(JSON.stringify(configRs.data))
 
             return utils.Success(null)
         }catch (e) {

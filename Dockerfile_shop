@@ -1,0 +1,21 @@
+FROM node:14
+
+LABEL author="hhh <haunghaohao86@gmail.com.com>"
+LABEL describe="shop_server"
+RUN mkdir -p /home/shop_server
+WORKDIR /home/shop_server
+
+COPY package.json ./
+
+
+COPY  . /home/shop_server
+
+COPY package.json ./
+
+RUN npm install
+
+COPY  . .
+
+EXPOSE 8090
+
+CMD npm i&&  npm run shop

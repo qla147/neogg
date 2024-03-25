@@ -1,12 +1,9 @@
 const express = require("express")
-const {models} = require("mongoose");
 const router = express.Router()
 const utils = require("../../common/utils/utils")
 const ErrorCode  = require("../../common/const/ErrorCode")
 const OrderService = require("../../services/OrderService")
 const mongoose = require("mongoose");
-const {GoodsInfo} = require("../../models/mongo/GoodsInfo");
-
 
 
 
@@ -16,7 +13,8 @@ const {GoodsInfo} = require("../../models/mongo/GoodsInfo");
  * @description 获取取订单列表
  */
 router.get("/" , async(req , res)=>{
-// 使用管道解决问题
+    let userInfo = req.userInfo
+    // 使用管道解决问题
     //------------------------------------------------------------------------------------------------------------
     let   {goodsName  , pageSize , pageNo , orderStatus } = req.query
 
@@ -45,14 +43,13 @@ router.get("/" , async(req , res)=>{
         pageNo = 0
     }
 
-    if(![ 0,1, 2, 3, 4].includes(orderStatus) ||![ "0","1", "2", "3", "4"].includes(orderStatus) ){
-        return utils.Error(null , ErrorCode.PARAM_ERROR , "orderStatus")
+    if(orderStatus && !([ 0,1, 2, 3, 4].includes(orderStatus) ||[ "0","1", "2", "3", "4"].includes(orderStatus)) ){
+        return res.json(utils.Error(null , ErrorCode.PARAM_ERROR , "orderStatus"))
     }
 
-    let rs = await OrderService.search()
+    let rs = await OrderService.search(userInfo ,{pageSize, pageNo , goodsName, orderStatus})
 
-
-
+    return res.json(rs)
 
 })
 
@@ -66,7 +63,6 @@ router.post("/" , async (req, res) =>{
     if (!Array.isArray(goodsInfos) || goodsInfos.length === 0 ){
         return res.json(utils.Error(null , ErrorCode.PARAM_ERROR , "goodsInfos"))
     }
-
 
     for(const x in goodsInfos){
         let  {goodsId , goodsCount } = goodsInfos[x]
@@ -146,23 +142,23 @@ router.post("/:orderId/pay" ,async (req , res)=>{
     return res.json(rs)
 })
 
-/**
- * @description 订单再次购买
- */
-router.post("/:orderId/purchaseAgain", async(req , res)=>{
+// /**
+//  * @description 订单再次购买
+//  */
+// router.post("/:orderId/purchaseAgain", async(req , res)=>{
+//
+//
+//
+// })
 
-
-
-})
-
-/**
- * @description  订单退货退款
- */
-router.put("/:orderId/refund", async(req, res)=>{
-
-
-
-})
+// /**
+//  * @description  订单退货退款
+//  */
+// router.put("/:orderId/refund", async(req, res)=>{
+//
+//
+//
+// })
 
 
 module.exports =  router

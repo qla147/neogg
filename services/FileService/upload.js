@@ -1,12 +1,104 @@
 const utils = require("../../common/utils/utils")
 const ErrorCode = require("../../common/const/ErrorCode")
 const {FileInfoModel, FileModel}  = require("../../models/mongo/FileInfo")
+const {FileInfoGridFsModel,FileGridInfoModel, FileRecord} = require("../../models/gridfs/FileInfo")
 const fileRedisModel  = require("../../models/redis/FileInfo")
 const fileUtils = require("../../common/utils/fileUtils")
 const cryptoUtils = require("../../common/utils/cryptoUtils")
 const path = require("path")
+const mongoose = require("mongoose");
 const config = global._config
 const service = {}
+
+
+/**
+ * @description 根据用户md5值下载文件
+ * @param fileMd5
+ * @param res
+ * @return {Promise<{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}|{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|*>}
+ */
+service.down = async (fileMd5, res)=>{
+    try{
+        let rs = await FileGridInfoModel.findOneAndUpdate({filename:fileMd5},{$inc:{"metadata.downCount": 1}, $set: {"metadata.lastDownTime": Date.now()}})
+        if(!rs){
+            res.status(404)
+            return res.end()
+        }
+       await FileInfoGridFsModel.downOne(rs, res);
+
+       return utils.Success()
+    }catch (e) {
+        console.error(e)
+        return utils.Error(e)
+    }
+}
+
+
+/**
+ * @description v2版本的文件上传使用mongodb的gridfs 作为存储方
+ * @param userInfo {type: Object} 用户信息
+ * @param fileInfos {type: Object} 文件信息
+ * @return {Promise<*>}
+ */
+service.up = async(userInfo , fileInfos ) =>{
+    try{
+
+        let userId = userInfo._id ;
+
+        let fileMapList  = []
+
+        for(const x in fileInfos){
+            let  {size, filepath, newFilename, mimetype , mtime ,originalFilename } = fileInfos[x]
+            console.log(x, filepath)
+            let rs = await cryptoUtils.getFileMd5ByStream(filepath)
+            if(!rs.success){
+                return rs
+            }
+            // 获取文件扩展名
+            let extenName = path.extname(originalFilename)
+            let id = new mongoose.Types.ObjectId()
+            let mongoFileInfo = {
+                contentType  : mimetype,
+                id ,
+                metadata:{
+                    extenName,
+                }
+            }
+            // 判断下文件是否存在 已经上传过了
+            let fileGridInfo = await FileGridInfoModel.findOne({filename: rs.data})
+            fileMapList.push( {fileId : id, url : config.downloadDomain +"/file/v2/api/down/"+rs.data })
+            if(fileGridInfo){
+                continue
+            }
+
+            // 使用流上传文件
+            rs  = await FileInfoGridFsModel.insertOne(filepath, rs.data, mongoFileInfo )
+            if(!rs.success){
+                return rs
+            }
+        }
+        // 用户操作记录入库
+        // await FileRecord.insertMany(fileMapList)
+
+        return utils.Success(fileMapList)
+
+    }catch (e){
+        console.error(e)
+        return utils.Error(e)
+    }finally {
+        if(fileInfos){
+            for(const x in fileInfos){
+                let  {filepath } = fileInfos[x]
+                fileUtils.deleteFile(filepath).then(rs=>{
+                    if(!rs.success){
+                        console.error("删除临时文件出现错误")
+                    }
+
+                })
+            }
+        }
+    }
+}
 
 
 /**

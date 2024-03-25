@@ -5,7 +5,7 @@ const express = require('express');
 // const  path = require('path');
 const  logger = require('morgan');
 // var debug = require('debug')('neogg:server');
-const {timer} = require("./services/TimerService/index")
+// const {timer} = require("./services/TimerService/index")
 
 
 const  http = require('http');
@@ -25,7 +25,6 @@ async function init(){
                 fs.mkdirSync(config.filePath, { recursive: true });
             }
         });
-        // console.log(global._config)
 
         return utils.Success(null)
     }catch (e) {
@@ -46,9 +45,9 @@ init().then(rs=>{
         process.exit(1)
     }
     // 设置定时器
-    timer.setTask(require("./services/TimerService/FileExpiredTask").generatorTask())
+    // timer.setTask(require("./services/TimerService/FileExpiredTask").generatorTask())
 
-    timer.start()
+    // timer.start()
 
     const app = express()
 
@@ -63,10 +62,13 @@ init().then(rs=>{
         console.error(req.url)
         next()
     })
-    // 文件上传专用
-    app.use("/v1/api/file/upload",require("./routers/FileRouter/fileUpload"))
-    // // 文件下载专用
-    app.use("/v1/api/file/download", require("./routers/FileRouter/fileDownload"))
+    // // 文件上传专用
+    // app.use("/v1/api/file/upload",require("./routers/FileRouter/fileUpload"))
+    // // // 文件下载专用
+    // app.use("/v1/api/file/download", require("./routers/FileRouter/fileDownload"))
+
+    app.use("/file/v2/api",userCheckMiddleware, require("./routers/FileRouter"))
+
     app.set('port', global._config.port);
     const server = http.createServer(app);
 

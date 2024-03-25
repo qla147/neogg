@@ -3,6 +3,7 @@ const utils = require("../../common/utils/utils");
 const ErrorCode = require("../../common/const/ErrorCode");
 const Constant = require("../../common/const/Common");
 const CartService  = require("../../services/CartService")
+const CartOrderService = require("../../services/CartService/CartOrder")
 const mongoose   = require("mongoose")
 const router = express.Router()
 
@@ -183,8 +184,31 @@ router.put("/" , async(req, res)=>{
         rs = await CartService.updateCart(userInfo , cartInfos)
     }
     return res.json(rs)
+})
+
+
+/**
+ * @description  购物车商品生成订单
+ */
+router.post("/order" , async(req , res)=>{
+    let userInfo = req.userInfo
+    let cartIds  =  req.body
+
+    if(!Array.isArray(cartIds) || cartIds.length === 0 ){
+        return res.json(utils.Error(null , ErrorCode.PARAM_ERROR, "cartId"))
+    }
+
+    for(const x in cartIds){
+        if(!mongoose.isValidObjectId(cartIds[x])){
+            return res.json(utils.Error(null , ErrorCode.PARAM_ERROR, "cartId"))
+        }
+    }
+
+    let rs = await CartOrderService.createOrder(userInfo , cartIds)
+    return res.json(rs)
 
 })
+
 
 
 module.exports = router

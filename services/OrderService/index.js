@@ -11,7 +11,6 @@ const {OrderInfoRedisLock} = require("../../models/redis/OrderInfo")
 const {UserInfoRedisModel} = require("../../models/redis/UserInfo")
 const {UserInfoMongoModel} = require("../../models/mongo/UserInfo")
 const mongoose = require("../../common/db/mongo");
-const {DEFAULT_OPTIONS} = require("consul/lib/constants");
 
 const service = {}
 
@@ -37,13 +36,15 @@ service.payOrder = async (userInfo, orderId, payMethod) => {
         await session.startTransaction()
 
         // 拿到订单信息
-        let orderInfo = OrderInfoMongoModel.findOne({_id: orderId, userId}, null, {session})
+        let orderInfo = await OrderInfoMongoModel.findOne({_id: orderId, userId}, null, {session})
         if (!orderInfo) {
             return utils.Error(null, ErrorCode.ORDER_INFO_NOT_FOUND)
         }
 
+        const {orderStatus } = orderInfo
+
         // 判断订单状态
-        switch (orderInfo.orderStatus) {
+        switch (orderStatus) {
             case 0 :
                 //待支付
                 break;
@@ -99,13 +100,14 @@ service.payOrder = async (userInfo, orderId, payMethod) => {
                     return utils.Error(null, ErrorCode.ORDER_PAY_USER_WALLET_LOCKED)
                 }
 
-                userInfo = await UserInfoMongoModel.findOne({_id: userId}, {}, {session})
+                userInfo = await UserInfoMongoModel.findOne({_id: userId}, null, {session})
 
                 if (userInfo.userWallet < orderInfo.totalPrice) {
                     return utils.Error(null, ErrorCode.ORDER_PAY_USER_WALLET_BALANCE_INSUFFICIENT)
                 }
+                let payMoney = -orderInfo.totalPrice
 
-                await UserInfoMongoModel.updateOne({_id: userInfo}, {$set: {$inc: -orderInfo.totalPrice}}, {session})
+                await UserInfoMongoModel.updateOne({_id: userInfo._id}, {$inc:{userWallet : payMoney}}, {session})
 
 
                 break;
@@ -173,13 +175,14 @@ service.cancelOrder = async (userInfo, orderId) => {
 
     try {
         const userId = userInfo._id
+        // 拿到订单信息
         let orderInfo = await OrderInfoMongoModel.findOne({_id: orderId, userId})
         if (!orderInfo) {
             return utils.Error(null, ErrorCode.ORDER_INFO_NOT_FOUND)
         }
 
-        const {orderStatus} = userInfo
-
+        const {orderStatus} = orderInfo
+        // 判断状态的合法性
         switch (orderStatus) {
             case 0 :
                 // 待支付
@@ -278,7 +281,7 @@ service.deleteOne = async (userInfo, orderId) => {
 
         await session.startTransaction()
         // 获取订单信息 同时也删除
-        let orderInfo = await OrderInfoMongoModel.findOneAndDelete({_id: orderId, userId}, null, {session})
+        let orderInfo = await OrderInfoMongoModel.findOneAndDelete({_id: orderId, userId},  {session})
         if (!orderInfo) {
             return utils.Success()
         }
@@ -321,7 +324,7 @@ service.deleteOne = async (userInfo, orderId) => {
                 break;
         }
 
-        await OrderInfoBackUpMongoModel.insertOne(orderInfo, {session})
+        await OrderInfoBackUpMongoModel.findOneAndUpdate({_id: orderId}, orderInfo, {upsert:true , session})
 
         await session.commitTransaction()
 
@@ -431,7 +434,9 @@ service.addOrder = async (userInfo, goodsInfos) => {
         // 检测商品的状态是否存在锁定状态
         for (const x in goodsInfos) {
             const {goodsId} = goodsInfos[x]
+            console.log(x)
             let lockStatusRs = await GoodsLockRedisModel.status(goodsId)
+
             if (!lockStatusRs.success) {
                 return lockStatusRs
             }
@@ -451,6 +456,7 @@ service.addOrder = async (userInfo, goodsInfos) => {
             const {goodsId} = goodsInfos[x]
             // 从缓存拿到商品信息
             let goodsInfoRs = await GoodsInfoRedisModel.get(goodsId)
+
             if (!goodsInfoRs.success) {
                 return goodsInfoRs
             }
@@ -463,7 +469,7 @@ service.addOrder = async (userInfo, goodsInfos) => {
                     return utils.Error(null, ErrorCode.GOODS_INFO_NOT_FOUND, goodsId)
                 }
 
-                let saveRs = await GoodsInfoRedisModel.insert(goodsId.toString(), goodsInfo)
+                let saveRs = await GoodsInfoRedisModel.insert(goodsId.toString(), goodsInfo.toObject())
 
                 if (!saveRs.success) {
                     return saveRs
@@ -471,7 +477,8 @@ service.addOrder = async (userInfo, goodsInfos) => {
             }
 
             // 没有库存
-            if (goodsInfo.goodsStatus === 2) {
+            console.error(goodsInfo)
+            if (parseInt(goodsInfo.goodsStatus) === 2) {
                 return utils.Error(null, ErrorCode.GOODS_OUT_OF_STOCK)
             }
 
@@ -480,6 +487,7 @@ service.addOrder = async (userInfo, goodsInfos) => {
             if (!stockNumRs.success) {
                 return stockNumRs
             }
+
             // 没有库存
             if (stockNumRs.data <= 0) {
                 let updateInfo = {
@@ -489,6 +497,7 @@ service.addOrder = async (userInfo, goodsInfos) => {
 
                 await GoodsInfo.updateOne({_id: goodsId}, {$set: updateInfo}, {upsert: false, session})
                 let rs = await GoodsInfoRedisModel.updateField(goodsId, updateInfo)
+
                 if (rs.success) {
                     await session.abortTransaction()
                     return rs
@@ -515,14 +524,7 @@ service.addOrder = async (userInfo, goodsInfos) => {
                 return checkOutRs
             }
 
-            if (!checkOutRs.data) {
-                // 没有库存
-                await G
-
-
-            }
-
-
+            // 记录出库的商品，出现错误就回退
             outStockRecord[goodsId] = goodsCount
 
             let goodsInStockNumRs = await GoodsNumRedisModel.getCount(goodsId)
@@ -623,19 +625,39 @@ service.addOrder = async (userInfo, goodsInfos) => {
 
 /**
  * @desc 检索用户订单
- * @param userInfo
- * @param searchParam
+ * @param userInfo {type: Object} 用户信息
+ * @param searchParam {type : Object} 检索信息
  * @return {Promise<{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
  */
 service.search = async (userInfo, searchParam) => {
     try {
+        let userId = userInfo._id
+        let {pageSize, pageNo , goodsName, orderStatus} = searchParam
 
+        let firstSearch = {
+            userId,
+        }
+
+        if(orderStatus){
+            firstSearch.orderStatus = orderStatus
+        }
+
+        if(goodsName){
+            firstSearch['orderGoodsInfo.goodsName']= {
+                $regex: RegExp(goodsName, 'i')
+            }
+        }
+
+
+
+        let  list = await OrderInfoMongoModel.find(firstSearch).sort({createTime:-1}).skip(pageNo* pageSize).limit(pageSize).lean()
+        let count = await OrderInfoMongoModel.countDocuments(firstSearch)
+
+        return utils.Success({list, count})
     } catch (e) {
         console.error(e)
         return utils.Error(e)
     }
-
-
 }
 
 
