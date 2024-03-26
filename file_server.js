@@ -80,7 +80,7 @@ init().then(rs=>{
         console.error(err)
     })
 
-    server.listen(global._config.port,global._config.host);
+    server.listen(global._config.port);
     server.on('error', (err)=>{
         console.error(err)
     });

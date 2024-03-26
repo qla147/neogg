@@ -4,7 +4,7 @@ const assert = require('assert')
 
 let  passwd =  "sssddsss"
 
-// console.log(key.toString())
+
 const str = JSON.stringify( {
         "aaaa": "ndsfsdfsdeddffdyf",
         "sss": "fdfdfdfdf",

@@ -15,6 +15,115 @@ const mongoose = require("../../common/db/mongo");
 const service = {}
 
 /**
+ * @description
+ * @type {{CANCEL: string, EXPIRED: string}}
+ */
+const METHOD = {
+    CANCEL: "cancel", // 取消订单
+    EXPIRED :"expired" // 订单过期
+}
+
+async function expiredOrCancelOrder (OrderInfo, method ){
+    let session
+    let flag = false
+    let backGoodsRecord = {}
+    try{
+        const {orderGoodsInfo, _id } = orderGoodsInfo
+        // 拿到锁
+        let lockRs = await OrderInfoRedisLock.lock(_id.toString())
+        if(!lockRs.success){
+            return lockRs
+        }
+
+        if(!lockRs.data){
+            return utils.Error(null, ErrorCode.ORDER_PAY_LOCKED)
+        }
+
+        flag = true
+
+        // 开始回库
+        session = await mongoose.startSession()
+        await session.startTransaction()
+
+        // 商品回库
+        let rs;
+        for (const x in orderGoodsInfo) {
+            const {goodsId, goodsCount} = orderGoodsInfo[x]
+            // redis 回库
+            rs = await goodsBackToStock(goodsId, goodsCount, session)
+            if (!rs.success) {
+                flag = true
+                await session.abortTransaction()
+                return rs
+            }
+
+            backGoodsRecord[goodsId] = goodsCount
+        }
+
+        await OrderInfoMongoModel.updateOne({_id }, {$set: {orderStatus: method === METHOD.CANCEL ? 1 : 2}}, {session})
+
+        await session.commitTransaction()
+
+        return utils.Success()
+
+    }catch (e) {
+        console.error(e)
+        if(session){
+            await session.abortTransaction()
+        }
+        return utils.Error(e)
+    }finally {
+        if (session) {
+            await session.endSession()
+        }
+
+        if (flag) {
+            for (const goodsId in backGoodsRecord) {
+                let rs = await GoodsNumRedisModel.subMore(goodsId, backGoodsRecord[goodsId])
+                if (!rs.success) {
+                    console.log("取消订单回滚失败：", JSON.stringify(rs))
+                    console.error(rs)
+                }
+            }
+
+            let rs = await OrderInfoRedisLock.unlock(OrderInfo._id.toString())
+            if(!rs.success){
+                let msg = method === METHOD.CANCEL ?"取消订单，释放锁出现错误":"过期失效订单：出现错误"
+                console.error(msg, JSON.stringify(rs))
+            }
+        }
+    }
+}
+
+/**
+ * @description 检测用户订单超期未付款问题
+ * @return
+ */
+service.checkExpiredOrder = async()=>{
+    try{
+        let expiredOrderList = await OrderInfoMongoModel.find({ expiredDate: { $lte: Date.now() }, orderStatus: 0 },{userId:1 , orderGoodsInfo:1, _id : 1}).lean()
+        // 没有过期的订单
+        if(expiredOrderList.length === 0 ){
+            return utils.Success()
+        }
+
+        for(const x in  expiredOrderList){
+            // 回库更新订单
+            await expiredOrCancelOrder(expiredOrderList[x], METHOD.EXPIRED)
+        }
+
+        return utils.Success()
+
+    }catch (e) {
+        console.error(e)
+        return utils.Error(e)
+    }
+
+
+}
+
+
+/**
  * @description 用户支付订单
  * @param userInfo {type: Object} 用户信息
  * @param orderId {type: String } 订单ID
@@ -169,9 +278,7 @@ service.payOrder = async (userInfo, orderId, payMethod) => {
  * @return {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}|*|{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
  */
 service.cancelOrder = async (userInfo, orderId) => {
-    let session
-    let flag = false
-    let backGoodsRecord = {}
+
 
     try {
         const userId = userInfo._id
@@ -206,58 +313,39 @@ service.cancelOrder = async (userInfo, orderId) => {
                 return utils.Error(null, ErrorCode.ORDER_STATUS_NOT_KNOWN)
 
         }
-
-        session = await mongoose.startSession()
-
-        await session.startTransaction()
-
-
-        // 商品回库
-        let {orderGoodsInfo} = orderInfo
-        let rs;
-        for (const x in orderGoodsInfo) {
-            const {goodsId, goodsCount} = orderGoodsInfo[x]
-
-            rs = await goodsBackToStock(goodsId, goodsCount, session)
-            if (!rs.success) {
-                flag = true
-                await session.abortTransaction()
-                return rs
-            }
-
-            backGoodsRecord[goodsId] = goodsCount
-        }
-
-
-        await OrderInfoMongoModel.updateOne({_id: orderId}, {$set: {orderStatus: 1}}, {session})
-
-        await session.commitTransaction()
-
-        return utils.Success()
+        // 订单回库。状态更新
+        return await expiredOrCancelOrder(orderInfo, METHOD.CANCEL)
+        // // session = await mongoose.startSession()
+        // //
+        // // await session.startTransaction()
+        //
+        //
+        // // 商品回库
+        // let {orderGoodsInfo} = orderInfo
+        // let rs;
+        // for (const x in orderGoodsInfo) {
+        //     const {goodsId, goodsCount} = orderGoodsInfo[x]
+        //
+        //     rs = await goodsBackToStock(goodsId, goodsCount, session)
+        //     if (!rs.success) {
+        //         flag = true
+        //         await session.abortTransaction()
+        //         return rs
+        //     }
+        //
+        //     backGoodsRecord[goodsId] = goodsCount
+        // }
+        //
+        //
+        // await OrderInfoMongoModel.updateOne({_id: orderId}, {$set: {orderStatus: 1}}, {session})
+        //
+        // await session.commitTransaction()
+        //
+        // return utils.Success()
 
     } catch (e) {
         console.error(e)
-        flag = true
-        if (session) {
-            await session.abortTransaction()
-        }
         return utils.Error(e)
-    } finally {
-        if (session) {
-            await session.endSession()
-        }
-
-        if (flag) {
-            for (const goodsId in backGoodsRecord) {
-                let rs = await GoodsNumRedisModel.subMore(goodsId, backGoodsRecord[goodsId])
-                if (!rs.success) {
-                    console.log("取消订单回滚失败：", JSON.stringify(rs))
-                    console.error(rs)
-                }
-            }
-
-
-        }
     }
 }
 
@@ -273,6 +361,8 @@ service.deleteOne = async (userInfo, orderId) => {
     let flag;// 用来标记回库是否成功
     let backGoodsStockRecord = {}
 
+    let lockFlag = false
+
     try {
 
         let userId = userInfo._id
@@ -280,6 +370,19 @@ service.deleteOne = async (userInfo, orderId) => {
         session = await mongoose.startSession()
 
         await session.startTransaction()
+        // 获取锁
+        let lockRs = await OrderInfoRedisLock.lock(orderId)
+        if(!lockRs.success){
+            return lockRs
+        }
+        // 判断锁是否获取成功
+        if(!lockRs.data){
+            return utils.Error(null , ErrorCode.ORDER_PAY_LOCKED)
+        }
+
+        lockFlag = true
+
+
         // 获取订单信息 同时也删除
         let orderInfo = await OrderInfoMongoModel.findOneAndDelete({_id: orderId, userId},  {session})
         if (!orderInfo) {
@@ -341,6 +444,10 @@ service.deleteOne = async (userInfo, orderId) => {
 
         if (session) {
             await session.endSession()
+        }
+
+        if(lockFlag){
+            await OrderInfoRedisLock.unlock(orderId)
         }
 
         if (flag) {

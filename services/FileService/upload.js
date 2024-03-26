@@ -48,8 +48,8 @@ service.up = async(userInfo , fileInfos ) =>{
         let fileMapList  = []
 
         for(const x in fileInfos){
+            console.table(fileInfos[x])
             let  {size, filepath, newFilename, mimetype , mtime ,originalFilename } = fileInfos[x]
-            console.log(x, filepath)
             let rs = await cryptoUtils.getFileMd5ByStream(filepath)
             if(!rs.success){
                 return rs

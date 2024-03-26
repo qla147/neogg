@@ -43,11 +43,12 @@ init().then(rs=>{
         console.error("The server was stopped !")
         process.exit(1)
     }
-
+    const {timer} = require("./services/TimerService")
     // 设置定时器
-    // timer.setTask(require("./services/TimerService/FileExpiredTask").generatorTask())
 
-    // timer.start()
+    timer.setTask(require("./services/TimerService/OrderHandlerTask").generatorTask())
+
+    timer.start()
 
     const app = express()
 

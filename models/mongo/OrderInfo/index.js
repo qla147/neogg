@@ -92,7 +92,7 @@ const OrderInfo = new Schema({
 
 OrderInfo.index({userId :1 ,createTime : -1 })
 OrderInfo.index({userId :1 ,status : 1 ,createTime : -1 })
-
+OrderInfo.index({expiredDate :1 ,status : 1})
 
 module.exports =  {
     OrderInfoMongoModel : mongoose.model("order_info", OrderInfo, "order_info" ),

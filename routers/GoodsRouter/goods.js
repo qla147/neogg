@@ -6,91 +6,7 @@ const Constant = require("../../common/const/Common")
 const GoodsService = require("../../services/GoodsService")
 
 
-/**
- * @description 检测商品等参数是否合法
- * @param goodsInfo  {type : Object, required : true } 商品基本信息
- * @param goodsDetail  {type : Object, required : true } 商品详情
- * @returns {{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}}
- */
-const checkGoodsInfoAndGoodsDetail = (goodsInfo , goodsDetail) =>{
-    try{
-        // ----------------------------------------------参数检测-goodsInfo---------------------------------------------------
-        if (!goodsInfo){
-            return utils.Error(null , ErrorCode.PARAM_ERROR, "goodsInfo")
-        }
 
-        if(!goodsDetail){
-            return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsDetail")
-        }
-
-        let  {goodsType, goodsName , goodsPrice, goodsCount , goodsImgs } = goodsInfo
-
-        if (!Constant.GOODS_TYPE.includes(goodsType)){
-            return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsType")
-        }
-
-        if(!goodsName || goodsName.length === 0  || goodsName.length > 200){
-            return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsName")
-        }
-
-        if(!goodsPrice ||isNaN(goodsPrice)){
-            return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsPrice")
-        }
-
-        if (typeof goodsPrice == "string"){
-            goodsPrice = parseInt(goodsPrice)
-        }
-
-        if (goodsPrice <= 0 ){
-            return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsPrice")
-        }
-
-
-        if (!goodsCount || isNaN(goodsCount)){
-            return utils.Error(null , ErrorCode.PARAM_ERROR , "goodCount")
-        }
-
-        if(typeof goodsCount == "string"){
-            goodsCount = parseInt(goodsCount)
-        }
-
-        if (goodsCount <= 0  || goodsCount > 9999){
-            return utils.Error(null , ErrorCode.PARAM_ERROR , "goodCount")
-        }
-
-        if(!Array.isArray(goodsImgs) || goodsImgs.length === 0 ){
-            return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsImgs")
-        }
-
-        for(const x in goodsImgs){
-            if (goodsImgs[x].length === 0 ){
-                return utils.Error(null , ErrorCode.PARAM_ERROR , "goodsImgs")
-            }
-        }
-
-        //-----------------------------------------------------参数检测-goodsDetail-------------------------------------------
-        let  { extraData , contentHtml } = goodsDetail
-
-        if (contentHtml.length === 0 ){
-            return utils.Error(null , ErrorCode.PARAM_ERROR , "contentHtml")
-        }
-        goodsInfo = {}
-        goodsInfo["goodsType"] = goodsType
-        goodsInfo["goodsName"] = goodsName
-        goodsInfo["goodsPrice"] = goodsPrice
-        goodsInfo["goodsCount"] = goodsCount
-        goodsInfo["goodsImgs"] = goodsImgs
-        goodsDetail = {}
-        goodsDetail["extraData"] = extraData
-        goodsDetail["contentHtml"] = contentHtml
-
-
-        return utils.Success(null )
-    }catch (e) {
-        console.error(e)
-        return utils.Error(e)
-    }
-}
 
 /**
  * @desc 修改商品详情
@@ -99,7 +15,7 @@ router.put("/:goodsId" , async(req, res) =>{
     const {goodsId} = req.params
     const {goodsInfo , goodsDetail } = req.body
     // 检测参数
-    let rs = checkGoodsInfoAndGoodsDetail(goodsInfo , goodsDetail)
+    let rs = GoodsService.checkGoodsInfoAndGoodsDetailParam(goodsInfo , goodsDetail)
     if (!rs.success){
         return res.json(rs)
     }
@@ -127,7 +43,7 @@ router.put("/:goodsId" , async(req, res) =>{
 router.post("/" , async (req , res)=>{
     let {goodsDetail , goodsInfo} = req.body
     // 检测参数
-    let rs = checkGoodsInfoAndGoodsDetail(goodsInfo , goodsDetail)
+    let rs = GoodsService.checkGoodsInfoAndGoodsDetailParam(goodsInfo , goodsDetail)
     if (!rs.success){
         return res.json(rs)
     }
