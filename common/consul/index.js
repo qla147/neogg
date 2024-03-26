@@ -6,8 +6,8 @@ let  config ;
 class  ConsulClient {
     constructor() {
         this.client = new Consul({
-            host: commonConfig.consul.host,
-            port : commonConfig.consul.port
+            host: global.commonConfig.consul.host,
+            port : global.commonConfig.consul.port
         })
         // 初始化配置
         this.initConfig = this.initConfig.bind(this)

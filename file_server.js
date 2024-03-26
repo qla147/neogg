@@ -1,5 +1,5 @@
 global.commonConfig = require("./config/oss.json")
-const initConfig = require("./initConfig")
+
 const utils = require("./common/utils/utils");
 const express = require('express');
 // const  path = require('path');
@@ -10,11 +10,14 @@ const  logger = require('morgan');
 
 const  http = require('http');
 const fs = require("fs")
+const serverUtils = require("./common/utils/serverUtils");
 
 // var server
 
 async function init(){
     try{
+        await serverUtils.getParam()
+        const initConfig = require("./initConfig")
         await  initConfig.init()
         require("./common/db/redis");
         require("./common/db/mongo");
@@ -85,15 +88,15 @@ init().then(rs=>{
     server.on('listening', ()=>{
         console.error("the server is starting at : ",global._config.port,":",global._config.host )
         // registered to consul
-        initConfig.afterInit().then(rs=>{
-            if (!rs.success){
-                console.error(rs.error , rs.msg)
-                process.exit(1)
-            }
-        }).catch(err=>{
-            console.error(err)
-            process.exit(1)
-        })
+        // initConfig.afterInit().then(rs=>{
+        //     if (!rs.success){
+        //         console.error(rs.error , rs.msg)
+        //         process.exit(1)
+        //     }
+        // }).catch(err=>{
+        //     console.error(err)
+        //     process.exit(1)
+        // })
     });
     server.on("error", (err)=>{
         console.error(err)

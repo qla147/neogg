@@ -12,9 +12,11 @@
   "license": "ISC",
   "dependencies": {
     "amqplib": "^0.10.3",
+    "chai": "^5.1.0",
     "consul": "^1.2.0",
     "cookie-parser": "~1.4.4",
     "cron": "^3.1.6",
+    "crypto-js": "^4.2.0",
     "debug": "~2.6.9",
     "elasticsearch": "^16.3.0",
     "express": "~4.16.1",

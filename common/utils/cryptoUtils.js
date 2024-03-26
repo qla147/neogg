@@ -1,13 +1,14 @@
 const fs = require("fs")
 const crypto = require("crypto")
 const utils = require("./utils")
-const {Debug} = require("ioredis/built/utils");
-const config =  global._config
+var CryptoJS = require('crypto-js')
 const cryptoUtils = {}
 
-const passwordAlgorithm = "aes-256-cbc"
-
-
+let options = {
+    mode: CryptoJS.mode.ECB,
+    iv: CryptoJS.enc.Hex.parse("00000000000000000"),
+    padding: CryptoJS.pad.Pkcs7
+}
 
 
 /**
@@ -47,24 +48,43 @@ cryptoUtils.getStringMd5ByStream= (str)=>{
 
 
 /**
- * @description 加密密码
- * @param password {type: String} 待加密的密码
+ * @description Aes加密
+ * @param str {type: String} 待加密的字符串
+ * @param key {type: String} 加密密码
  * @return {Promise<unknown>}
  * @constructor
  */
-cryptoUtils.EncodePassword = (password)=>{
+cryptoUtils.AesEncode = (str, key)=>{
     return new Promise(resolve => {
-        let iv = crypto.randomBytes(16)
-        let cipher = crypto.createCipheriv(passwordAlgorithm, Buffer.from(config.passwordCode, "base64"), iv )
+        try{
+            let encryptedData = CryptoJS.AES.encrypt(str, key,options );
+            let hexData = encryptedData.toString();
+            return resolve(utils.Success(hexData))
+        }catch (e) {
+            console.error(e)
+            return resolve(utils.Error(e))
+        }
 
-        const input = Buffer.from(password , "utf-8")
-        const encryptedChunks = []
-        encryptedChunks.push(cipher.update(input))
-        encryptedChunks.push(cipher.final())
-        const encryptedData = Buffer.concat(encryptedChunks);
-        return utils.Success(encryptedData.toString("base64"))
     })
 }
-
+/**
+ * @description Aes解密
+ * @param str {type: String} 待解密的字符串
+ * @param key {type: String} 解密密码
+ * @return {Promise<unknown>}
+ * @constructor
+ */
+cryptoUtils.AesDecode = (str, key)=>{
+    return new Promise(resolve => {
+        try{
+            let decryptedData  = CryptoJS.AES.decrypt(str, key, options);
+            let text = decryptedData.toString(CryptoJS.enc.Utf8);
+            return resolve(utils.Success(text))
+        }catch (e) {
+            console.error(e)
+            return resolve(utils.Error(e))
+        }
+    })
+}
 
 module.exports = cryptoUtils

@@ -1,8 +1,5 @@
 {
   "serverName": "file_server",
   "serverNo": "200",
-  "consul": {
-    "host": "192.168.2.4",
-    "port": "8500"
-  }
+  "consul": "U2FsdGVkX1/bQnYfjojCV9sMF5MNkxoRn6rQssFowFsLyNSpgR22sSxJOLKsVtdWBscA4DGKiXRbTC83GkaaKA=="
 }

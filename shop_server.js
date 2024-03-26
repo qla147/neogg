@@ -1,30 +1,9 @@
 global.commonConfig = require("./config/shop.json")
-const initConfig = require("./initConfig")
+
 const utils = require("./common/utils/utils");
 const express = require('express');
 const  logger = require('morgan');
-// const path = require("path")
-// const v8Profiler = require('v8-profiler-next');
-// const fs = require("fs")
-// v8Profiler.setGenerateType(1);
-// v8Profiler.startProfiling(global.commonConfig.serverName, true);
-//
-// v8Profiler.startProfiling(global.commonConfig.serverName, true);
-// setTimeout(() => {
-//     const profile = v8Profiler.stopProfiling(global.commonConfig.serverName);
-//     profile.export(function (error, result) {
-//         // if it doesn't have the extension .cpuprofile then
-//         // chrome's profiler tool won't like it.
-//         // examine the profile:
-//         //   Navigate to chrome://inspect
-//         //   Click Open dedicated DevTools for Node
-//         //   Select the profiler tab
-//         //   Load your file
-//         fs.writeFileSync(`${global.commonConfig.serverName}.cpuprofile`, result);
-//         profile.delete();
-//     });
-// }, 10 * 1000);
-// const  http = require('http');
+const  serverUtils = require("./common/utils/serverUtils")
 //
 const {createServer} = require("http");
 // const mongoose = require("mongoose");
@@ -34,8 +13,17 @@ const {createServer} = require("http");
  * @description 初始化服务器各项配置
  * @return {Promise<{msg: string, timeStamp: number, code: string, data, success: boolean, error: null}|{msg: string, timeStamp: number, code: string, data: null, success: boolean, error}>}
  */
+
+
+
+
+
+
+
 async function init(){
     try{
+        await serverUtils.getParam()
+        const initConfig = require("./initConfig")
         await  initConfig.init()
         require("./common/db/redis");
         require("./common/db/mongo");
@@ -55,6 +43,7 @@ init().then(rs=>{
         console.error("The server was stopped !")
         process.exit(1)
     }
+
     // 设置定时器
     // timer.setTask(require("./services/TimerService/FileExpiredTask").generatorTask())
 
@@ -91,7 +80,7 @@ init().then(rs=>{
         console.error(err)
     })
 
-    server.listen(global._config.port,global._config.host);
+    server.listen(global._config.port);
     server.on('error', (err)=>{
         console.error(err)
     });
@@ -99,17 +88,17 @@ init().then(rs=>{
         //     console.error("clientError")
         // })
         server.on('listening', ()=>{
-            console.log("server listent at ", global._config.port,global._config.host)
+            console.log("server listen at ", global._config.port,global._config.host)
             // registered to consul
-            initConfig.afterInit().then(rs=>{
-                if (!rs.success){
-                    console.error(rs.error , rs.msg)
-                    process.exit(1)
-                }
-            }).catch(err=>{
-                console.error(err)
-                process.exit(1)
-            })
+            // initConfig.afterInit().then(rs=>{
+            //     if (!rs.success){
+            //         console.error(rs.error , rs.msg)
+            //         process.exit(1)
+            //     }
+            // }).catch(err=>{
+            //     console.error(err)
+            //     process.exit(1)
+            // })
         });
     server.on("error", (err)=>{
         console.error(err)

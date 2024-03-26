@@ -25,7 +25,7 @@ const inits = {
         try{
             //
             // if (!registerRs.success){
-                return await consul.registerServer()
+            //     return await consul.registerServer()
             // }
             // const rs = await consul.initService()
             // return rs
