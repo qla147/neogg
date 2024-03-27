@@ -88,12 +88,12 @@ service.up = async(userInfo , fileInfos ) =>{
         if(fileInfos){
             for(const x in fileInfos){
                 let  {filepath } = fileInfos[x]
-                // fileUtils.deleteFile(filepath).then(rs=>{
-                //     if(!rs.success){
-                //         console.error("删除临时文件出现错误")
-                //     }
-                //
-                // })
+                fileUtils.deleteFile(filepath).then(rs=>{
+                    if(!rs.success){
+                        console.error("删除临时文件出现错误")
+                    }
+
+                })
             }
         }
     }
