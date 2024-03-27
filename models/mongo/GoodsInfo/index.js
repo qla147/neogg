@@ -23,7 +23,7 @@ const GoodsBasicInfo = new Schema({
         type: Number ,
         desc :"商品原始可售数量",
         min:0 ,
-        max:9999
+        max:99999999999
     },
     goodsImgs :[{
         type : String,

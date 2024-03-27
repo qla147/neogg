@@ -27,8 +27,10 @@ async function expiredOrCancelOrder (OrderInfo, method ){
     let session
     let flag = false
     let backGoodsRecord = {}
+    let flagLock = false
+
     try{
-        const {orderGoodsInfo, _id } = orderGoodsInfo
+        const {orderGoodsInfo, _id } = OrderInfo
         // 拿到锁
         let lockRs = await OrderInfoRedisLock.lock(_id.toString())
         if(!lockRs.success){
@@ -39,7 +41,7 @@ async function expiredOrCancelOrder (OrderInfo, method ){
             return utils.Error(null, ErrorCode.ORDER_PAY_LOCKED)
         }
 
-        flag = true
+        flagLock = true
 
         // 开始回库
         session = await mongoose.startSession()
@@ -50,6 +52,7 @@ async function expiredOrCancelOrder (OrderInfo, method ){
         for (const x in orderGoodsInfo) {
             const {goodsId, goodsCount} = orderGoodsInfo[x]
             // redis 回库
+
             rs = await goodsBackToStock(goodsId, goodsCount, session)
             if (!rs.success) {
                 flag = true
@@ -83,9 +86,15 @@ async function expiredOrCancelOrder (OrderInfo, method ){
                 if (!rs.success) {
                     console.log("取消订单回滚失败：", JSON.stringify(rs))
                     console.error(rs)
+                }else{
+                    console.log("取消订单回滚成功：", JSON.stringify(rs))
                 }
             }
 
+
+        }
+
+        if(flagLock){
             let rs = await OrderInfoRedisLock.unlock(OrderInfo._id.toString())
             if(!rs.success){
                 let msg = method === METHOD.CANCEL ?"取消订单，释放锁出现错误":"过期失效订单：出现错误"
@@ -138,9 +147,7 @@ service.payOrder = async (userInfo, orderId, payMethod) => {
     let userWalletFlag = false
 
     try {
-
         let userId = userInfo._id
-
         session = await mongoose.startSession()
         await session.startTransaction()
 
@@ -215,6 +222,7 @@ service.payOrder = async (userInfo, orderId, payMethod) => {
                     return utils.Error(null, ErrorCode.ORDER_PAY_USER_WALLET_BALANCE_INSUFFICIENT)
                 }
                 let payMoney = -orderInfo.totalPrice
+
 
                 await UserInfoMongoModel.updateOne({_id: userInfo._id}, {$inc:{userWallet : payMoney}}, {session})
 
@@ -482,6 +490,7 @@ const goodsBackToStock = async function (goodsId, goodsCount, session) {
 
         // 回滚商品数量
         let rs = await GoodsNumRedisModel.addMore(goodsId, goodsCount)
+
         if (!rs.success) {
             return rs
         }
@@ -494,10 +503,12 @@ const goodsBackToStock = async function (goodsId, goodsCount, session) {
 
         let goodsInStockNum = goodsInStockNumRs.data
 
+
+        goodsInfo.goodsCount = goodsInfo.goodsCount || 0
         // 组装更新数据
         let updateData = {
             goodsStatus: 1,
-            soldCount: goodsInfo.goodsCount - goodsInStockNum
+            soldCount: parseInt(goodsInfo.goodsCount) - goodsInStockNum
         }
         // 更新缓存
         rs = await GoodsInfoRedisModel.updateField(goodsId, updateData)
@@ -541,7 +552,7 @@ service.addOrder = async (userInfo, goodsInfos) => {
         // 检测商品的状态是否存在锁定状态
         for (const x in goodsInfos) {
             const {goodsId} = goodsInfos[x]
-            console.log(x)
+
             let lockStatusRs = await GoodsLockRedisModel.status(goodsId)
 
             if (!lockStatusRs.success) {
@@ -560,7 +571,7 @@ service.addOrder = async (userInfo, goodsInfos) => {
 
         // 获取商品的详情
         for (const x in goodsInfos) {
-            const {goodsId} = goodsInfos[x]
+            const {goodsId, goodsCount} = goodsInfos[x]
             // 从缓存拿到商品信息
             let goodsInfoRs = await GoodsInfoRedisModel.get(goodsId)
 
@@ -569,6 +580,7 @@ service.addOrder = async (userInfo, goodsInfos) => {
             }
 
             let goodsInfo = goodsInfoRs.data
+
             if (Object.keys(goodsInfo).length === 0) {
                 // mongo 来查询
                 goodsInfo = await GoodsInfo.findOne({_id: goodsId}, null, {session})
@@ -583,12 +595,13 @@ service.addOrder = async (userInfo, goodsInfos) => {
                 }
             }
 
-            // 没有库存
-            console.error(goodsInfo)
-            if (parseInt(goodsInfo.goodsStatus) === 2) {
-                return utils.Error(null, ErrorCode.GOODS_OUT_OF_STOCK)
-            }
+            // // 没有库存
+            // if (parseInt(goodsInfo.goodsStatus) === 2) {
+            //     return utils.Error(null, ErrorCode.GOODS_OUT_OF_STOCK)
+            // }
 
+
+            //  获取库存
             let stockNumRs = await GoodsNumRedisModel.getCount(goodsId)
 
             if (!stockNumRs.success) {
@@ -596,16 +609,16 @@ service.addOrder = async (userInfo, goodsInfos) => {
             }
 
             // 没有库存
-            if (stockNumRs.data <= 0) {
+            if (stockNumRs.data < goodsCount) {
                 let updateInfo = {
-                    goodsStatus: 2,
-                    soldCount: goodsInfo.goodsCount
+                    goodsStatus: stockNumRs.data > 0 ? 1 : 2,
+                    soldCount: goodsInfo.goodsCount - stockNumRs.data
                 }
 
                 await GoodsInfo.updateOne({_id: goodsId}, {$set: updateInfo}, {upsert: false, session})
                 let rs = await GoodsInfoRedisModel.updateField(goodsId, updateInfo)
 
-                if (rs.success) {
+                if (!rs.success) {
                     await session.abortTransaction()
                     return rs
                 }

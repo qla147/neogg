@@ -49,7 +49,7 @@ async function init(){
                 fs.mkdirSync(config.filePath, { recursive: true });
             }
         });
-        console.log(global._config)
+
 
         return utils.Success(null)
     }catch (e) {

@@ -1,6 +1,7 @@
 const utils = require("../../common/utils/utils")
 const ErrorCode = require("../../common/const/ErrorCode")
 const {GoodsDetail, GoodsInfo} = require("../../models/mongo/GoodsInfo");
+const Constant = require("../../common/const/Common")
 const {GoodsNumRedisModel} = require("../../models/redis/GoodsInfo")
 const  GoodsInfoEsModel= require("../../models/es/GoodsInfo")()
 const {GoodsLockRedisModel, GoodsInfoRedisModel} = require("../../models/redis/GoodsInfo")
@@ -57,7 +58,7 @@ service.checkGoodsInfoAndGoodsDetailParam = (goodsInfo , goodsDetail) =>{
             goodsCount = parseInt(goodsCount)
         }
 
-        if (goodsCount <= 0  || goodsCount > 9999){
+        if (goodsCount <= 0  || goodsCount > 9999999999){
             return utils.Error(null , ErrorCode.PARAM_ERROR , "goodCount")
         }
 
@@ -210,6 +211,7 @@ service.updateGoods = async (goodsId , param )=>{
         await GoodsDetail.updateOne({goodsId} , {$set: goodsDetail } , {upsert: false , WriteConcern:{w:"majority"} , session})
 
         // 商品数量发生变化
+        console.error(goodsCountGap)
         if(goodsCountGap !== 0  ){
             if(goodsCountGap > 0 ){
                let addRs =  await GoodsNumRedisModel.addMore(goodsId ,goodsCountGap )
@@ -217,7 +219,7 @@ service.updateGoods = async (goodsId , param )=>{
                     await session.abortTransaction()
                 }
             }else{
-                let subRs = await GoodsNumRedisModel.subMore(goodsId, Math.abs(goodsCountGap))
+                let subRs = await GoodsNumRedisModel.subMore(goodsId, goodsCountGap)
                 if (!subRs.success){
                     await session.abortTransaction()
                 }
@@ -290,6 +292,8 @@ service.addGoods = async (params)=>{
         let goodsInfoEs = { goodsType, goodsName, id:_id.toString(),goodsPrice}
 
         rs = await GoodsInfoEsModel.insert(goodsInfoEs)
+        console.error("写入Es =============> ",rs)
+
         if(!rs.success){
             // 回滚redis
             await GoodsNumRedisModel.removeAll(goodsInfo._id.toString())
@@ -322,31 +326,16 @@ service.addGoods = async (params)=>{
  */
 service.search  = async (searchParam)=>{
     try{
-        let {orderBy , orderSeries, quickSearch , goodsType , goodsName , maxGoodsPrice , minGoodsPrice, goodsStatus , pageSize  , pageNo } = searchParam
+        console.error(searchParam)
+        let {orderBy , orderSeries, quickSearch , goodsType , goodsName , maxGoodsPrice , minGoodsPrice, goodsStatus , pageSize = 10   , pageNo = 0  } = searchParam
         // ------------------------------------------------------组装检索条件---------------------------------------------
         let search = {}
-        if (quickSearch || goodsName){
+        if (quickSearch || goodsName) {
             // 有全文检索字段使用es检索
-            let query ;
-            if (goodsName){
-                query = {
-                    "multi_match": {
-                        "query": quickSearch,
-                        "type": "most_fields",
-                        "operator":"or",
-                        "fields": ["goodsName", "goodsType"]
-                    }
+            let query = {
+                "match": {
+                    "goodsName": goodsName || quickSearch,
                 }
-            } else{
-                 query = {
-                    "multi_match": {
-                        "query": goodsName ,
-                        "type": "most_fields",
-                        "operator":"or",
-                        "fields": ["goodsName"]
-                    }
-                }
-
             }
 
 
@@ -361,6 +350,7 @@ service.search  = async (searchParam)=>{
             if (ids.length > 0 ){
                 search._id = {$in: ids }
             }else{
+                console.error("es 没有找到")
                 return utils.Success({list:[], count:0 })
             }
         }
@@ -397,7 +387,7 @@ service.search  = async (searchParam)=>{
         // 检索数据库
         let list = await GoodsInfo.find(search).sort(sort).skip(pageNo * pageSize ).limit(pageSize).lean();
         let count  = await GoodsInfo.countDocuments(search)
-
+        console.error("mongo 没有找到"+ list)
         return utils.Success({list, count})
     }catch (err) {
         console.error(err)

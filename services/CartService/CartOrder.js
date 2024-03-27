@@ -2,6 +2,7 @@ const utils = require("../../common/utils/utils")
 const {CartInfoModel} = require("../../models/mongo/CartInfo");
 const OrderService = require("../OrderService")
 const ErrorCode = require("../../common/const/ErrorCode")
+const {GoodsInfo} = require("../../models/mongo/GoodsInfo");
 
 
 const services = {}
@@ -20,7 +21,8 @@ services.createOrder = async(userInfo, cartIds)=>{
         if(cartInfos.length !== cartIds.length){
             return utils.Error(null , ErrorCode.CART_INFO_NOT_FOUND)
         }
-        console.error(1)
+
+
         // 生成订单
         let rs = await OrderService.addOrder(userInfo , cartInfos)
 

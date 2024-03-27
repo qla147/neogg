@@ -48,7 +48,6 @@ service.up = async(userInfo , fileInfos ) =>{
         let fileMapList  = []
 
         for(const x in fileInfos){
-            console.table(fileInfos[x])
             let  {size, filepath, newFilename, mimetype , mtime ,originalFilename } = fileInfos[x]
             let rs = await cryptoUtils.getFileMd5ByStream(filepath)
             if(!rs.success){
@@ -89,12 +88,12 @@ service.up = async(userInfo , fileInfos ) =>{
         if(fileInfos){
             for(const x in fileInfos){
                 let  {filepath } = fileInfos[x]
-                fileUtils.deleteFile(filepath).then(rs=>{
-                    if(!rs.success){
-                        console.error("删除临时文件出现错误")
-                    }
-
-                })
+                // fileUtils.deleteFile(filepath).then(rs=>{
+                //     if(!rs.success){
+                //         console.error("删除临时文件出现错误")
+                //     }
+                //
+                // })
             }
         }
     }

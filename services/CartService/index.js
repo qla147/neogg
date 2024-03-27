@@ -2,7 +2,7 @@ const utils = require("../../common/utils/utils")
 const ErrorCode = require("../../common/const/ErrorCode")
 const {CartInfoModel} = require("../../models/mongo/CartInfo");
 const  GoodsInfoEsModel= require("../../models/es/GoodsInfo")()
-const {GoodsInfoRedisModel} = require("../../models/redis/GoodsInfo")
+const {GoodsInfoRedisModel, GoodsNumRedisModel} = require("../../models/redis/GoodsInfo")
 const {GoodsInfo} = require("../../models/mongo/GoodsInfo");
 
 const service = {}
@@ -27,7 +27,7 @@ service.updateCart = async(userInfo , cartInfos)=>{
         // 判断需要变更的商品
         for (const x in cartInfos){
             let cartInfo = originalCartList.find((t)=>{
-                return t._id.toString() === cartInfos[x]._id
+                return t._id.toString() === cartInfos[x]._id.toString()
             })
             // 商品数量不相等就是要更新
             if ( !cartInfo || cartInfo.goodsCount !== cartInfos[x].goodsCount ){
@@ -38,7 +38,7 @@ service.updateCart = async(userInfo , cartInfos)=>{
         // 判断需要删除的商品
         for(const x in originalCartList){
             let cartInfo= cartInfos.find((t)=>{
-                return t._id === originalCartList[x]._id.toString()
+                return t._id.toString() === originalCartList[x]._id.toString()
             })
 
             if(!cartInfo){
@@ -48,7 +48,6 @@ service.updateCart = async(userInfo , cartInfos)=>{
 
         // 把更新删除任务放入数组使用promise 同时异步执行
         let tasks = []
-
         if (needDeleteGoods.length > 0 ){
             tasks.push(CartInfoModel.deleteMany({_id:{$in: needDeleteGoods} , userId}))
         }
@@ -56,6 +55,7 @@ service.updateCart = async(userInfo , cartInfos)=>{
         for(const x in needChangedGoods){
             tasks.push(CartInfoModel.updateOne({_id: needChangedGoods[x]._id , userId},{$set:{goodsCount: needChangedGoods[x].goodsCount}}))
         }
+
 
         if(tasks.length ){
             let results  = await Promise.allSettled(tasks)
@@ -139,12 +139,46 @@ service.deleteGoodsFromCart = async (userInfo , cartId)=>{
 /**
  * @description 添加商品到购物车
  * @param userInfo {type: Object} 用户信息
- * @param goodsId {type: Mongoose.Types.ObjectId} 商品ID
+ * @param goodsId {type: Mongoose.Types.ObjectId | String} 商品ID
  * @param goodsCount {type: Number} 商品数量
  */
 service.addGoodsIntoCart = async (userInfo , goodsId , goodsCount ) =>  {
     try{
         let userId = userInfo._id
+
+        // 查看商品是是否存在
+        let goodsInfoRs = await GoodsInfoRedisModel.get(goodsId)
+
+        if(!goodsInfoRs.success){
+            return goodsInfoRs
+        }
+
+        let goodsInfo = goodsInfoRs.data
+
+
+        if (Object.keys(goodsInfo).length === 0 ){
+            goodsInfo = await GoodsInfo.findOne({_id: goodsId})
+            if (!goodsInfo) {
+                return utils.Error(null , ErrorCode.GOODS_INFO_NOT_FOUND)
+            }
+        }
+        // // 商品 out of stock
+        // if(goodsInfo.goodsStatus  !== 1){
+        //     return utils.Error(null , ErrorCode.GOODS_OUT_OF_STOCK)
+        // }
+        //l
+
+        let goodsInfNumRs = await GoodsNumRedisModel.getCount(goodsId)
+
+        if(!goodsInfNumRs.success){
+            return goodsInfNumRs
+        }
+
+        if (goodsCount >  goodsInfNumRs.data){
+            return utils.Error(null , ErrorCode.GOODS_OUT_OF_STOCK)
+        }
+
+
         //  查看商品是否存在于购物车
         let goodsInCart = await CartInfoModel.findOne({userId , goodsId})
         if (goodsInCart){
@@ -153,32 +187,14 @@ service.addGoodsIntoCart = async (userInfo , goodsId , goodsCount ) =>  {
             return utils.Success(rs)
         }else{
             // 不存在就比较麻烦 ，提取数据然后入库
-            let goodsInfoRs = await GoodsInfoRedisModel.get(goodsId)
 
-            if(!goodsInfoRs.success){
-                return goodsInfoRs
-            }
-
-            let goodsInfo = goodsInfoRs.data
 
             goodsInCart = {
                 goodsId,
                 userId,
                 goodsCount
             }
-
-            if (Object.keys(goodsInfo).length > 0 ){
-                goodsInCart = {...goodsInfo,...goodsInCart }
-
-
-                // goodsInCart =  Object.assign(goodsInCart,goodsInfo )
-            }else {
-                goodsInfo = await GoodsInfo.findOne({_id:goodsId})
-                if (!goodsInfo) {
-                    return utils.Error(null , ErrorCode.GOODS_INFO_NOT_FOUND)
-                }
-                goodsInCart =  goodsInCart = {...goodsInfo,...goodsInCart }
-            }
+            goodsInCart = {...goodsInfo,...goodsInCart }
 
             goodsInCart = new CartInfoModel(goodsInCart)
 

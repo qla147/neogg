@@ -1400,11 +1400,19 @@ npm  run file
 # node 启动 file_server 
 node ./file_server.js
 
+
+# npm 运行测试代码
+npm run test
+
+## node运行测试代码
+
 ~~~
 
 
 
 ### 构建docker镜像
+
+**需要修改配置， 对外开发的代码都是配置加密的，需要修改上述配置才可以**
 
 ~~~shell
 
@@ -1417,7 +1425,6 @@ docker build -f .\Dockerfile_file -t file_server .
  
  # 构建shop_server 镜像 
  docker build -f .\Dockerfile_shop -t shop_server .
-
  
 ~~~
 

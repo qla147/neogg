@@ -1,5 +1,4 @@
 global.commonConfig = require("./config/shop.json")
-
 const utils = require("./common/utils/utils");
 const express = require('express');
 const  logger = require('morgan');

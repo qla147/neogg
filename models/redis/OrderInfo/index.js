@@ -24,8 +24,22 @@ const  OrderInfoRedisLock =  {
             console.error(e);
             return utils.Error(e);
         }
-
     },
+
+    /**
+     * @description 获取用户订单锁
+     */
+    status:async (orderId)=>{
+         try{
+            let key = `lock:order:${orderId}`
+             let rs = await redisClient.exists(key)
+             return utils.Success(rs)
+         }catch (e) {
+             console.error(e)
+             return utils.Error(e)
+         }
+    },
+
 
     /**
      * @author : hhh

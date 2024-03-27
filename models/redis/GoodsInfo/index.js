@@ -1,7 +1,6 @@
 const redisClient = require("../../../common/db/redis")
 const utils = require("../../../common/utils/utils")
 const ErrorCode = require("../../../common/const/ErrorCode")
-const config  = global._config
 
 
 const RedisTransaction = {
@@ -32,7 +31,7 @@ const RedisTransaction = {
 const GoodsLockRedisModel = {
     lock: async(goodsId)=>{
         try{
-            let key = `lock:goods:${goodsId}`
+            let key = `lock:goods:${goodsId.toString()}`
             let rs = await redisClient.setnx(key, 1)
             if (rs === 1){
                 await redisClient.expire(key , 30 )
@@ -47,7 +46,7 @@ const GoodsLockRedisModel = {
 
     unlock : async (goodsId) =>{
         try {
-            let key = `lock:goods:${goodsId}`
+            let key = `lock:goods:${goodsId.toString()}`
             let rs = await redisClient.del( key)
             return utils.Success(rs)
         }catch (e) {
@@ -58,7 +57,7 @@ const GoodsLockRedisModel = {
     status : async (goodsId)=>{
         try{
             // let key = "lock:"+goodsId
-            let key = `lock:goods:${goodsId}`
+            let key = `lock:goods:${goodsId.toString()}`
             let rs = await redisClient.exists(key)
             return utils.Success(rs)
         }catch (e) {
@@ -78,7 +77,7 @@ const GoodsNumRedisModel = {
     // 入库一个商品
     insertOne :async (goodsId )=>{
         try{
-            let rs = await redisClient.lpush("goodsNum:"+goodsId,1 )
+            let rs = await redisClient.lpush("goodsNum:"+goodsId.toString(),1 )
             return utils.Success(rs)
         }catch (e) {
             console.error(e)
@@ -88,7 +87,9 @@ const GoodsNumRedisModel = {
     // 获取还待出售的商品数量
     getCount : async (goodsId)=>{
       try{
-          let rs = await redisClient.llen("goodsNum:"+goodsId)
+
+          let rs = await redisClient.llen("goodsNum:"+goodsId.toString())
+
           return utils.Success(rs)
       }  catch (e) {
           console.error(e)
@@ -98,9 +99,9 @@ const GoodsNumRedisModel = {
     // 出库一/n个商品
     checkout : async (goodsId , num = 1) =>{
         try{
-            let key = "goodsNum:"+goodsId
+            let key = "goodsNum:"+goodsId.toString()
             let rs = await redisClient.rpop(key, num )
-            console.log(rs)
+
 
             // 全部没有取出来
             if(rs.length  === 0 ){
@@ -128,8 +129,13 @@ const GoodsNumRedisModel = {
             if (num === 0 ){
                 return utils.Success()
             }
-            let key = "goodsNum:"+goodsId ;
-            await redisClient.lrem(key , num , 1 )
+            let key = "goodsNum:"+goodsId.toString() ;
+            if (num < 0  ){
+                num  = -num
+            }
+
+            let rs  = await redisClient.lrem(key, num, 1 )
+
             return utils.Success(null )
         }catch (e) {
             console.error(e)
@@ -140,6 +146,9 @@ const GoodsNumRedisModel = {
     // 二次添加商品的数量
     addMore:async (goodsId , num )=>{
         try{
+
+            console.error(num, goodsId)
+
             if (num === 0 ){
                 return utils.Success()
             }
@@ -147,20 +156,15 @@ const GoodsNumRedisModel = {
                 return utils.Error("The count added into db must be more than zero! goodsId: "+ goodsId )
             }
             let index = num
-            let key = "goodsNum:"+goodsId ;
-            let indexes = [] ;
+            let key = "goodsNum:"+goodsId.toString() ;
+            let values = []
             while(index > 0 ){
-                indexes.push(1)
-                if(indexes.length > 5){
-                    await redisClient.lpush(key, indexes)
-                    indexes = []
-                }
+                values.push(1)
                 index--
             }
 
-            if (indexes.length > 0){
-                await redisClient.lpush(key , indexes)
-            }
+            let rs = await redisClient.lpush(key, values)
+            let len = await redisClient.llen(key)
 
             return utils.Success(null )
 
@@ -172,7 +176,7 @@ const GoodsNumRedisModel = {
 
     removeAll:async (goodsId)=>{
         try{
-            let rs = await redisClient.del("goodsNum:"+goodsId)
+            let rs = await redisClient.del("goodsNum:"+goodsId.toString())
             return utils.Success(rs)
         }catch (e) {
             console.error(e)
@@ -183,9 +187,9 @@ const GoodsNumRedisModel = {
     initGoods :async(goodsId , count )=>{
         try{
             let indexes = []
-            let key = "goodsNum:"+goodsId ;
+            let key = "goodsNum:"+goodsId.toString() ;
             for (let x = 1 ; x <= count ; x++) {
-                indexes.push(x)
+                indexes.push(1)
                 if (indexes.length > 5){
                     await redisClient.lpush(key, ...indexes)
                     indexes = []
@@ -215,7 +219,7 @@ const  GoodsInfoRedisModel  = {
      */
     insert :async (goodsId , goodsInfo)=> {
         try{
-            let key = `goodsInfo:${goodsId}`
+            let key = `goodsInfo:${goodsId.toString()}`
             let rs = await redisClient.hmset(key, goodsInfo )
             return utils.Success(rs)
         }catch (e) {
@@ -230,7 +234,7 @@ const  GoodsInfoRedisModel  = {
      */
     get: async (goodsId)=>{
         try{
-            let key = `goodsInfo:${goodsId}`
+            let key = `goodsInfo:${goodsId.toString()}`
             let rs = await redisClient.hgetall(key)
             return utils.Success(rs)
         }catch (e) {
@@ -246,7 +250,7 @@ const  GoodsInfoRedisModel  = {
      */
     getField:async(goodsId, field) =>{
         try{
-            let key = `goodsInfo:${goodsId}`
+            let key = `goodsInfo:${goodsId.toString()}`
             let rs  = await redisClient.hget(key, field)
             return utils.Success(rs)
 
@@ -263,7 +267,7 @@ const  GoodsInfoRedisModel  = {
      */
     updateField :async (goodsId , keyValueMap )=>{
         try{
-            let key = `goodsInfo:${goodsId}`
+            let key = `goodsInfo:${goodsId.toString()}`
             let rs = await redisClient.hset(key , keyValueMap)
             return utils.Success(rs)
         }catch (e) {

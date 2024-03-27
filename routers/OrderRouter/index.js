@@ -64,6 +64,8 @@ router.post("/" , async (req, res) =>{
         return res.json(utils.Error(null , ErrorCode.PARAM_ERROR , "goodsInfos"))
     }
 
+    let goodsMap = {}
+
     for(const x in goodsInfos){
         let  {goodsId , goodsCount } = goodsInfos[x]
         if (!mongoose.isValidObjectId(goodsId)){
@@ -81,9 +83,20 @@ router.post("/" , async (req, res) =>{
         if( goodsInfos[x].goodsCount <= 0 ){
             return res.json(utils.Error(null , ErrorCode.PARAM_ERROR , "goodsInfos.goodsCount"))
         }
+        if(!goodsMap[goodsId]){
+            goodsMap[goodsId] = 0
+        }
+        goodsMap[goodsId] += goodsCount
     }
 
-    let rs = await OrderService.addOrder(userInfo , goodsInfos)
+    // 合并订单
+    let orderGoodsList = []
+    for(const goodsId in goodsMap){
+        orderGoodsList.push({goodsId , goodsCount : goodsMap[goodsId]})
+    }
+
+
+    let rs = await OrderService.addOrder(userInfo , orderGoodsList)
     return res.json(rs)
 })
 

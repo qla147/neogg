@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "file": "node ./file_server.js",
-    "shop": "node ./shop_server.js"
+    "shop": "node ./shop_server.js",
+    "test": "node ./test.js"
   },
   "keywords": [],
   "author": "",

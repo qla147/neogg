@@ -91,7 +91,7 @@ router.get("/:goodsId" , async(req , res)=>{
  * @param pageSize pageNo 分页参数
  */
 router.get("/" , async (req , res) =>{
-    let { orderBy = "createTime" , orderSeries = "desc", quickSearch , goodsType  , maxGoodsPrice , minGoodsPrice, goodsStatus , pageSize , pageNo } = req.query
+    let { orderBy = "createTime" , goodsName , orderSeries = "desc", quickSearch , goodsType  , maxGoodsPrice , minGoodsPrice, goodsStatus , pageSize , pageNo } = req.query
     // ----------------------------------------------------------------参数检验和校正-------------------------------------
     if (!!orderBy && !["goodsPrice","goodsName", "goodsType", "createTime"].includes(orderBy)){
         return res.json(utils.Error(null , ErrorCode.PARAM_ERROR, "orderBy"))
@@ -143,7 +143,7 @@ router.get("/" , async (req , res) =>{
         pageNo = 0
     }
 
-    let searchParam  = {orderBy , orderSeries, quickSearch , goodsType  , maxGoodsPrice , minGoodsPrice, goodsStatus , pageSize  , pageNo }
+    let searchParam  = {orderBy , orderSeries, quickSearch , goodsType  , maxGoodsPrice , minGoodsPrice, goodsStatus , pageSize  , pageNo , goodsName }
     // 进入服务层
     let rs = await GoodsService.search(searchParam)
     return res.json(rs)
