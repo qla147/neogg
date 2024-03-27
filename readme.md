@@ -336,6 +336,33 @@ const UserInfo = new Schema({
 
 ## API 部分
 
+### 商品类型表
+
+~~~json
+const constants = {
+    GOODS_TYPE : [
+        "CAR",
+        "COMPUTER",
+        "FASHION",
+        "HEALTH CARE",
+        "FOOD" ,
+        "SPORT",
+        "ELECTRIC",
+        "BOOK",
+        "ENTERTAIN" ,
+        "GAME",
+        "EDU",
+        "PET",
+        "INSURANCE",
+        "OTHER"
+    ]
+
+}
+
+~~~
+
+
+
 ### 错误码部分
 
 ~~~js
