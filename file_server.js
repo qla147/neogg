@@ -23,10 +23,9 @@ async function init() {
         require("./common/db/mongo");
         require("./common/db/mongoGridfs")
         const config = global._config
-        const dataPath = path.join(process.cwd(), config.filePath);
-        fs.access(dataPath, fs.constants.F_OK, (err) => {
+        fs.access(config.filePath, fs.constants.F_OK, (err) => {
             if (err) {
-                fs.mkdirSync(dataPath, { recursive: true });
+                fs.mkdirSync(config.filePath, { recursive: true });
             }
         });
 

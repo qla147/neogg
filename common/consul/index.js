@@ -1,6 +1,7 @@
 const Consul = require("consul")
 const utils = require("../utils/utils")
 const ipUtils = require("../utils/ipUtils")
+const path = require("path");
 let  config ;
 
 class  ConsulClient {
@@ -50,6 +51,7 @@ class  ConsulClient {
             }
 
             global._config = config
+            global._config.filePath = path.join(process.cwd(), config.filePath)
             return utils.Success(config)
         }catch (e) {
             console.error(e)
