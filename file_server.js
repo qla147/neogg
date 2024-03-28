@@ -2,7 +2,7 @@ global.commonConfig = require("./config/oss.json")
 
 const utils = require("./common/utils/utils");
 const express = require('express');
-// const  path = require('path');
+const  path = require('path');
 const  logger = require('morgan');
 // var debug = require('debug')('neogg:server');
 // const {timer} = require("./services/TimerService/index")
@@ -14,23 +14,24 @@ const serverUtils = require("./common/utils/serverUtils");
 
 // var server
 
-async function init(){
-    try{
+async function init() {
+    try {
         await serverUtils.getParam()
         const initConfig = require("./initConfig")
-        await  initConfig.init()
+        await initConfig.init()
         require("./common/db/redis");
         require("./common/db/mongo");
         require("./common/db/mongoGridfs")
         const config = global._config
-        fs.access(config.filePath, fs.constants.F_OK, (err) => {
+        const dataPath = path.join(process.cwd(), config.filePath);
+        fs.access(dataPath, fs.constants.F_OK, (err) => {
             if (err) {
-                fs.mkdirSync(config.filePath, { recursive: true });
+                fs.mkdirSync(dataPath, { recursive: true });
             }
         });
 
         return utils.Success(null)
-    }catch (e) {
+    } catch (e) {
         console.error(e)
         return utils.Error(e)
     }
