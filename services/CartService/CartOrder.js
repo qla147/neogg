@@ -32,7 +32,7 @@ services.createOrder = async(userInfo, cartIds)=>{
 
         await CartInfoModel.deleteMany({_id: {$in: cartIds}})
 
-        return utils.Success()
+        return utils.Success(rs.data)
     }catch (e) {
         console.error(e)
         return utils.Error(e)

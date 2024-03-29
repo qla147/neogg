@@ -240,17 +240,17 @@ service.payOrder = async (userInfo, orderId, payMethod) => {
         }
 
         // 状态变更
-        await OrderInfoMongoModel.updateOne({_id: orderId}, {
+        let newOrderInfo = await OrderInfoMongoModel.findOneAndUpdate({_id: orderId}, {
             $set: {
                 payMethod,
                 payTime: Date.now(),
                 orderStatus: 3
             }
-        }, {upsert: false, session})
+        }, {upsert: false, session, new : true })
 
         await session.commitTransaction()
 
-        return utils.Success()
+        return utils.Success(newOrderInfo)
 
     } catch (e) {
         console.error(e)
