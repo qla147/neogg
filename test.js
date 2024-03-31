@@ -39,7 +39,7 @@ init().then(rs=>{
             // await TestOrderTwo()
             // await TestOrderThree()
             // 心需求测试
-            let rs =  GeneralizeTest()
+            let rs = await  GeneralizeTest()
             console.log(rs)
 
             console.log("测试通过")

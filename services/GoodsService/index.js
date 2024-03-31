@@ -292,7 +292,6 @@ service.addGoods = async (params)=>{
         let goodsInfoEs = { goodsType, goodsName, id:_id.toString(),goodsPrice}
 
         rs = await GoodsInfoEsModel.insert(goodsInfoEs)
-        console.error("写入Es =============> ",rs)
 
         if(!rs.success){
             // 回滚redis
@@ -350,7 +349,6 @@ service.search  = async (searchParam)=>{
             if (ids.length > 0 ){
                 search._id = {$in: ids }
             }else{
-                console.error("es 没有找到")
                 return utils.Success({list:[], count:0 })
             }
         }
@@ -387,7 +385,6 @@ service.search  = async (searchParam)=>{
         // 检索数据库
         let list = await GoodsInfo.find(search).sort(sort).skip(pageNo * pageSize ).limit(pageSize).lean();
         let count  = await GoodsInfo.countDocuments(search)
-        console.error("mongo 没有找到"+ list)
         return utils.Success({list, count})
     }catch (err) {
         console.error(err)

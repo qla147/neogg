@@ -165,7 +165,6 @@ const GeneralizeTest = async () => {
 
 
         // 检测库存 是否对得上
-
         let goodsCheckOutMap = {}
         const {orderGoodsInfo, totalPrice} = newOrderInfo
         for (const x of orderGoodsInfo) {
@@ -180,7 +179,7 @@ const GeneralizeTest = async () => {
         for (const x in goodsList) {
             goodsMap[goodsList[x]._id.toString()] = goodsList[x]
         }
-
+        // 检测mongodb的销售数量 和售出数量是否对得上
         for (const goodsId in goodsCheckOutMap) {
             assert.equal(!!goodsMap[goodsId], true, "部分商品的库存没有查询到 ")
             assert.equal(goodsMap[goodsId].soldCount === goodsCheckOutMap[goodsId], true,"售出商品和 订单商品对不上" + JSON.stringify({goodsMap,goodsCheckOutMap} ) )
@@ -188,6 +187,18 @@ const GeneralizeTest = async () => {
             let lockRs = await GoodsLockRedisModel.status(goodsId)
             assert.equal(lockRs.success, true, "获取商品锁出现错误； " + JSON.stringify(lockRs))
             assert.equal(!lockRs.data, true, "商品都出库完成了，订单也支付了还有商品锁")
+        }
+        // 获取商品在redis中的库存
+        let goodsCheckoutOutRedis = {}
+        for (const x  in goodsIds){
+            let goodsNumRs = await  GoodsNumRedisModel.getCount(goodsIds[x])
+            assert.equal(goodsNumRs.success, true , "获取商品redis库存出现错误 ： "+ JSON.stringify(goodsNumRs))
+            goodsCheckoutOutRedis[goodsIds[x]] = goodsNumRs.data
+
+        }
+
+        for(let x in goodsMap){
+            assert.equal(goodsMap[x].goodsCount - goodsMap[x].soldCount === goodsCheckoutOutRedis[x], true , "商品redis库存和售出库存对不上"  )
         }
 
 
@@ -202,11 +213,8 @@ const GeneralizeTest = async () => {
         assert.equal(lockRs.success, true, "获取用户订单锁信息出现错误 ： " + JSON.stringify(lockRs))
         assert.equal(!lockRs.data, true, "商品都出库完成了，订单也支付了还有用户订单锁")
         // 检测用户余额是否发生变化
-
         let afterPayUserInfo = await UserInfoMongoModel.findOne({_id: userInfo._id})
-
         assert.equal(!!afterPayUserInfo, true, "订单支付之后。没有找到用户钱包信息 ")
-
         assert.equal(beforePayUserInfo.userWallet === afterPayUserInfo.userWallet + orderInfo.totalPrice, true, "购买商品之后用户钱包数量对不上")
 
 
